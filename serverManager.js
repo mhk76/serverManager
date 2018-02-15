@@ -31,7 +31,7 @@ module.exports = (config) =>
 	_serverManager.config.web.defaultFile = _serverManager.config.web.defaultFile || 'index.html';
 	_serverManager.config.web.protocol = _serverManager.config.web.protocol || 'http';
 	_serverManager.config.web.port = _serverManager.config.web.port || 80;
-	_serverManager.config.web.postBlockLimit = _serverManager.config.web.postBlockLimit || 1e5;
+	_serverManager.config.web.massageSize = _serverManager.config.web.massageSize || 1e5;
 	_serverManager.config.web.disablePost = (_serverManager.config.web.disablePost == true);
 	_serverManager.config.web.webSockets = (_serverManager.config.web.webSockets == true) || _serverManager.config.web.disablePost;
 

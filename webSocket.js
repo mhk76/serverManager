@@ -17,6 +17,13 @@ module.exports = (serverManager) =>
 			webSocket
 				.on('message', (message) =>
 				{
+					if (message.length > serverManager.config.web.massageSize)
+					{
+						serverManager.writeLog('ws', 'message-too-large', appRequest, startTime);
+						webSocket.terminate();
+						return;
+					}
+
 					let startTime = new Date().getTime();
 					let appRequest;
 					
@@ -59,39 +66,39 @@ module.exports = (serverManager) =>
 
 								appRequest.outputDataLength = outputData.length;
 
-								serverManager.writeLog('$ws', 'response', appRequest, startTime);
+								serverManager.writeLog('ws', 'response', appRequest, startTime);
 
 								webSocket.send(outputData);
 							},
 							terminate: () =>
 							{
-								serverManager.writeLog('$ws', 'terminate-force', appRequest, startTime);
+								serverManager.writeLog('ws', 'terminate-force', appRequest, startTime);
 								webSocket.terminate();
 							}
 						};
 					}
 					catch (err)
 					{
-						serverManager.writeLog('$ws', 'error', appRequest, startTime, err);
+						serverManager.writeLog('ws', 'error', appRequest, startTime, err);
 						webSocket.terminate();
 						return;
 					}
 
 					if (!appRequest.requestId)
 					{
-						serverManager.writeLog('$ws', 'missing-requestId', appRequest, startTime);
+						serverManager.writeLog('ws', 'missing-requestId', appRequest, startTime);
 						webSocket.terminate();
 						return;
 					}
 					if (!appRequest.action)
 					{
-						serverManager.writeLog('$ws', 'missing-action', appRequest, startTime);
+						serverManager.writeLog('ws', 'missing-action', appRequest, startTime);
 						webSocket.terminate();
 						return;
 					}
 					if (webSocket.userId && webSocket.userId !== appRequest.userId)
 					{
-						serverManager.writeLog('$ws', 'invalid-userId', appRequest, startTime);
+						serverManager.writeLog('ws', 'invalid-userId', appRequest, startTime);
 						webSocket.terminate();
 						delete _webSockets[webSocket.userId];
 						return;
@@ -105,7 +112,7 @@ module.exports = (serverManager) =>
 
 					if (_webSockets[webSocket.userId] && _webSockets[webSocket.userId].webSocket !== webSocket)
 					{
-						serverManager.writeLog('$ws', 'terminate-old', appRequest, startTime);
+						serverManager.writeLog('ws', 'terminate-old', appRequest, startTime);
 						_webSockets[webSocket.userId].webSocket.terminate();
 					}
 

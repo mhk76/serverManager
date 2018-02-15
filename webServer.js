@@ -115,7 +115,7 @@ module.exports = (serverManager) =>
 				request.on('data', (data) =>
 				{
 					queryData.push(data);
-					if (queryData.length > serverManager.config.web.postBlockLimit)
+					if (queryData.length > serverManager.config.web.massageSize)
 					{
 						queryData = "";
 						serverManager.writeLog(serverManager.config.web.protocol, 413, request, startTime, err);
