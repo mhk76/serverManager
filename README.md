@@ -1,2 +1,3 @@
 # serverManager
-NPM module for Node.js server application for web and webSocket 
+
+NPM module of Node.js server applications using web and webSocket
