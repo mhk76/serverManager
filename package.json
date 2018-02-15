@@ -1,0 +1,28 @@
+{
+  "name": "servermanager",
+  "version": "1.0.0",
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mhk76/servermanager/"
+  },
+  "main": "serverManager.js",
+  "dependencies": {
+    "sqlstring": "latest",
+    "uuid": "latest",
+    "ws": "latest"
+  },
+  "author": "Mikko Karhunen <mikko.karhunen@iki.fi>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "keywords": [
+    "web",
+    "websocket"
+  ]
+}

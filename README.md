@@ -1,2 +1,2 @@
 # serverManager
-Node.js server for web and webSocket
+Node.js application server for web and webSocket
