@@ -205,21 +205,24 @@ module.exports = (config) =>
 		initCache();
 	}
 
-	if (_serverManager.config.watchModules)
+	if (_serverManager.config.app.watchModules)
 	{
 		let restartTimer = null;
 		let modules = [_serverManager.config.app.file];
+		let filenames = [];
 
 		if (_app.subModules)
 		{
-			modules = modules.concat(_app.subModules);
+			modules = modules.concat(_root + _app.subModules);
 		}
 
 		modules.forEach((item) =>
 		{
+			filenames.push($path.parse(item).base);
+
 			$fs.watch(item, { persistent: true }, () =>
 			{
-				if (restartTimer === null)
+				if (restartTimer !== null)
 				{
 					clearTimeout(restartTimer);
 				}
@@ -232,6 +235,8 @@ module.exports = (config) =>
 				);
 			});
 		});
+
+		console.log('ServerManager - Watching modules: ' + filenames.join(', '));
 	}
 
 	_serverManager.initCache = (section, defaultData) =>
@@ -348,7 +353,7 @@ module.exports = (config) =>
 
 	_serverManager.restartApp = () =>
 	{
-		console.log('Recycling modules...');
+		console.log('ServerManager - Recycling modules');
 
 		if (_app.subModules)
 		{
@@ -362,6 +367,8 @@ module.exports = (config) =>
 
 		_app = require(_serverManager.config.app.file);
 		_app.start(_serverManager);
+
+		console.log('ServerManager - App restarted');
 	};
 
 	_serverManager.setListener = (callback) =>
