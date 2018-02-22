@@ -1,17 +1,22 @@
+'use strict';
+
 const $http = require('http');
 const $https = require('https');
 const $fs = require('fs');
+const $Uuidv1 = require('uuid/v1');
 const $path = require('path');
 const $mime = require('./mime.json');
-const $Promise = require('./promise.js');
 
 module.exports = (serverManager) =>
 {
 	let _server;
 	let _port;
+	let _userGroups = {};
+	let _broadcasts = [];
 	let _listener = (request) =>
 		{
-			console.log('default POST listener', request);
+			console.log('WebServer - Default POST listener');
+			console.log(request);
 			request.response({}, 'ok');
 		};
 
@@ -32,21 +37,42 @@ module.exports = (serverManager) =>
 		_port = process.env.PORT || serverManager.config.web.port || 80;
 	}
 
-	_server.loading = new $Promise();
+	_server.loading = new serverManager.Promise();
 
 	_server.listen(
 		_port,
 		() =>
 		{
 			serverManager.writeLog(serverManager.config.web.protocol, 'starting');
-			_server.loading.resolve();
 			console.log('WebServer - listening to port ' + _port);
+			_server.loading.resolve();
 		}
 	);
 
 	_server.setListener = (callback) =>
 	{
 		_listener = callback;
+	};
+
+	_server.setUserGroup = (userId, groupId) =>
+	{
+		_userGroups[userId] = groupId;
+	};
+
+	_server.broadcast = (groupId, dataType, data, lifeSpan) =>
+	{
+		_broadcasts.push({
+			userIds: groupId && Object.keys(_userGroups).filter((userId) =>
+			{
+				return _userGroups[userId] === groupId;
+			}),
+			requestId: dataType,
+			data: {
+				status: 'ok',
+				data: data
+			},
+			time: new Date().getTime() + ((lifeSpan || 60) * 1000)
+		});
 	};
 
 	return _server;
@@ -115,7 +141,7 @@ module.exports = (serverManager) =>
 				request.on('data', (data) =>
 				{
 					queryData.push(data);
-					if (queryData.length > serverManager.config.web.massageSize)
+					if (queryData.length > serverManager.config.web.messageSizeLimit)
 					{
 						queryData = "";
 						serverManager.writeLog(serverManager.config.web.protocol, 413, request, startTime, err);
@@ -154,13 +180,14 @@ module.exports = (serverManager) =>
 					}
 
 					let responseData = {};
-					let promises = json.actions.map((action, index) =>
+					let userId = json.userId || $Uuidv1();
+					let promises = json.actions.map((action) =>
 					{
-						let promise = new $Promise();
+						let promise = new serverManager.Promise();
 
 						promise.success((data) =>
 						{
-							responseData[index] = data;
+							responseData[action.requestId] = data;
 						});
 
 						if (buffer[action.command] && buffer[action.command].parameters.equals(action.parameters))
@@ -176,7 +203,7 @@ module.exports = (serverManager) =>
 						setTimeout(() =>
 						{
 							_listener({
-								userId: json.userId,
+								userId: userId,
 								action: action.command,
 								parameters: action.parameters,
 								inputDataLength: inputData.length,
@@ -184,18 +211,18 @@ module.exports = (serverManager) =>
 								{
 									remoteAddress: request.connection.remoteAddress
 								},
-								buffer: (action, parameters, response, isPermanent) =>
+								buffer: (action, parameters, responseData, isPermanent) =>
 								{
 									buffer[action] = {
 										parameters: parameters || {},
-										response: response || {},
+										response: responseData || {},
 										isPermanent: isPermanent || false
 									};
 								},
 								response: (data, status) =>
 								{
 									promise.resolve({
-										requestId: action.requestId,
+										userId: userId,
 										status: status || 'ok',
 										data: data || {}
 									});
@@ -223,8 +250,53 @@ module.exports = (serverManager) =>
 						return promise;
 					}); // json.actions.map()
 					
-					$Promise.all(promises).done(() =>
+					serverManager.Promise.all(promises).done(() =>
 					{
+						let remove = [];
+						let time = new Date().getTime();
+
+						for (let b in _broadcasts)
+						{
+							if (time > _broadcasts[b].time)
+							{
+								remove.push(b);
+								continue;
+							}
+
+							if (_broadcasts[b].userIds)
+							{
+								let i = _broadcasts[b].userIds.indexOf(request.userId);
+
+								if (i !== -1)
+								{
+									let data = _broadcasts[b].data;
+
+									data.userId = _broadcasts[b].userIds[i];
+
+									responseData[_broadcasts[b].requestId] = data;
+
+									_broadcasts[b].userIds[i].splice(i, 1);
+									if (_broadcasts[b].userIds === 0)
+									{
+										remove.push(b);
+									}
+								}
+							}
+							else
+							{
+								let data = _broadcasts[b].data;
+
+								data.userId = userId;
+
+								responseData[_broadcasts[b].requestId] = data;
+							}
+						}
+
+						for (let r = remove.length; r > 0; r--)
+						{
+							_broadcasts.splice(r - 1, 1);
+						}
+
 						let outputData = JSON.stringify({
 							userId: request.userId,
 							responses: responseData
@@ -254,7 +326,7 @@ module.exports = (serverManager) =>
 
 						serverManager.writeLog(serverManager.config.web.protocol, 200, appRequest, startTime);
 
-					}); // $Promise.all(promises).done()
+					}); // serverManager.Promise.all().done()
 
 				}); // request.on('end')
 

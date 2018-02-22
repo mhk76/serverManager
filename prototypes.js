@@ -1,6 +1,8 @@
+'use strict';
+
 Number.prototype.leftPad = function(length, padChar)
 {
-	var output = this.toString();
+	let output = this.toString();
 
 	if (output.length < length)
 	{
@@ -49,16 +51,16 @@ Object.equals = function(object1, object2, softComparison)
 		return false;
 	}
 
-	var keys = Object.keys(object1);
+	let keys = Object.keys(object1);
 	
 	if (!keys.equals(Object.keys(object2)))
 	{
 		return false;
 	}
 
-    for (var i in keys)
+    for (let i in keys)
 	{
-		var key = keys[i];
+		let key = keys[i];
 
 		if (object1[key] instanceof Function)
 		{

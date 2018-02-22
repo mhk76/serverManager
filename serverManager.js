@@ -1,3 +1,5 @@
+'use strict';
+
 const $fs = require('fs');
 const $path = require('path');
 const $Promise = require('./promise.js');
@@ -19,6 +21,7 @@ module.exports = (config) =>
 	let _startState = $stateInitial;
 	let _mongoose;
 	let _root = $path.dirname(require.main.filename).appendTrail('/');
+	let _serverManagerStart = new $Promise();
 
 	_serverManager.config = config || {};
 
@@ -31,20 +34,31 @@ module.exports = (config) =>
 	_serverManager.config.web.defaultFile = _serverManager.config.web.defaultFile || 'index.html';
 	_serverManager.config.web.protocol = _serverManager.config.web.protocol || 'http';
 	_serverManager.config.web.port = _serverManager.config.web.port || 80;
-	_serverManager.config.web.massageSize = _serverManager.config.web.massageSize || 1e5;
+	_serverManager.config.web.messageSizeLimit = _serverManager.config.web.messageSizeLimit || 1e5;
 	_serverManager.config.web.disablePost = (_serverManager.config.web.disablePost == true);
 	_serverManager.config.web.webSockets = (_serverManager.config.web.webSockets == true) || _serverManager.config.web.disablePost;
 
 	_serverManager.config.cache = _serverManager.config.cache || {}
 	_serverManager.config.cache.format = _serverManager.config.cache.format || 'file';
 	_serverManager.config.cache.file = _root + (_serverManager.config.cache.file || './cache.json');
-	_serverManager.config.cache.interval = (_serverManager.config.cache.interval || 60) * 1000; // ms
+	_serverManager.config.cache.interval = _serverManager.config.cache.interval || 60;
 
 	_serverManager.config.log = _serverManager.config.log || {};
 	_serverManager.config.log.format = _serverManager.config.log.format || 'file';
 	_serverManager.config.log.path = _root + (_serverManager.config.log.path || './log/').appendTrail('/');
 
+	verifyConfig();
+
+	_serverManager.Promise = $Promise;
+
 	let _app = require(_serverManager.config.app.file);
+
+	if (typeof _app.start !== 'function')
+	{
+		console.log('ServerManager - The application does not have start() method');
+		process.exit();
+	}
+
 	let _starting = new $Promise()
 		.success((state) =>
 		{
@@ -74,6 +88,7 @@ module.exports = (config) =>
 			{
 				_app.start(_serverManager);
 				console.log('ServerManager - App started');
+				_serverManagerStart.resolve();
 			}
 		});
 
@@ -170,8 +185,9 @@ module.exports = (config) =>
 						})
 						.fail((error) =>
 						{
-							console.log('ServerManager - MySql log database structure verification failed:');
-							console.log('- ' + error);
+							console.log('ServerManager - MySql log database structure verification failed');
+							console.log('>' + error);
+							
 							process.exit();
 						});
 				}
@@ -184,8 +200,9 @@ module.exports = (config) =>
 			{
 				setTimeout(() =>
 				{
-					console.log('ServerManager - MySql connection failed:');
-					console.log('- ' + error);
+					console.log('ServerManager - MySql connection failed');
+					console.log('>' + error);
+					
 					process.exit();
 				});
 			});
@@ -195,14 +212,31 @@ module.exports = (config) =>
 	{
 		_starting.resolve($stateData);
 	}
+
 	if (_serverManager.config.log.format === 'file')
 	{
 		console.log('ServerManager - Logging into files');
 		_starting.resolve($stateLog);
 	}
+	if (_serverManager.config.log.format === 'stdout')
+	{
+		console.log('ServerManager - Logging int stdout');
+		_starting.resolve($stateLog);
+	}
+	if (_serverManager.config.log.format === 'off')
+	{
+		console.log('ServerManager - No logging');
+		_starting.resolve($stateLog);
+	}
+
 	if (_serverManager.config.cache.format === 'file')
 	{
 		initCache();
+	}
+	if (_serverManager.config.cache.format === 'off')
+	{
+		_starting.resolve($stateCache);
+		console.log('ServerManager - No cache backup');
 	}
 
 	if (_serverManager.config.app.watchModules)
@@ -288,9 +322,10 @@ module.exports = (config) =>
 	{
 		let duration = new Date().getTime() - (startTime || new Date().getTime());
 
-		if (duration > 100)
+		if (duration > 1000)
 		{
-			console.log('ServerManager - Slow action: ', protocol, status, duration);
+			console.log('ServerManager - Slow action');
+			console.log('>' + protocol + ' (' + (request.action ? request.action + ': ' : '') + status + '): ' + duration + 'ms');
 		}
 
 		request = request || {};
@@ -314,7 +349,7 @@ module.exports = (config) =>
 		}
 		if (request.connection)
 		{
-			data['ip'] = request.connection.remoteAddress;
+			data['remote'] = request.connection.remoteAddress;
 		}
 		if (err)
 		{
@@ -338,7 +373,7 @@ module.exports = (config) =>
 		{
 			_serverManager.mysql.insert('log', data);
 		}
-		else
+		else if (_serverManager.config.log.format === 'file')
 		{
 			let date = new Date();
 
@@ -348,6 +383,10 @@ module.exports = (config) =>
 				{ encoding: 'utf8' },
 				() => {}
 			);
+		}
+		else if (_serverManager.config.log.format === 'stdout')
+		{
+			console.log(data);
 		}
 	};
 
@@ -380,6 +419,83 @@ module.exports = (config) =>
 		}
 	};
 
+	_serverManager.broadcast = (groupId, dataType, data, lifeSpan) =>
+	{
+		_serverManager.webServer.broadcast(groupId, dataType, data, lifeSpan);
+		if (_serverManager.webSocket)
+		{
+			_serverManager.webSocket.broadcast(groupId, dataType, data);
+		}
+	};
+
+	return _serverManagerStart;
+	
+
+	function verifyConfig()
+	{
+		if (!$fs.existsSync(_serverManager.config.app.file))
+		{
+			console.log('ServerManager - Application file was not found');
+			console.log('>' + _serverManager.config.app.file);
+			process.exit();
+		}
+	
+		if (!$fs.existsSync(_serverManager.config.web.root + _serverManager.config.web.defaultFile))
+		{
+			console.log('ServerManager - Default file was not found');
+			console.log('>' + _serverManager.config.web.root + _serverManager.config.web.defaultFile);
+			process.exit();
+		}
+
+		if (!['http', 'https'].includes(_serverManager.config.web.protocol))
+		{
+			console.log('ServerManager - Invalid web protocol');
+			console.log('>' + _serverManager.config.web.protocol);
+			process.exit();
+		}
+
+		if (_serverManager.config.web.port < 1 || _serverManager.config.web.port > 65535)
+		{
+			console.log('ServerManager - Invalid web port');
+			console.log('>' + _serverManager.config.web.protocol);
+			process.exit();
+		}
+
+		if (typeof _serverManager.config.web.messageSizeLimit !== 'number')
+		{
+			console.log('ServerManager - Invalid message size limit');
+			console.log('>' + _serverManager.config.web.messageSizeLimit);
+			process.exit();
+		}
+	
+		if (!['off', 'file', 'mysql'].includes(_serverManager.config.cache.format))
+		{
+			console.log('ServerManager - Invalid cache format');
+			console.log('>' + _serverManager.config.cache.format);
+			process.exit();
+		}
+
+		if (_serverManager.config.cache.format !== 'off' && (_serverManager.config.cache.interval < 1 || _serverManager.config.cache.interval > 36000))
+		{
+			console.log('ServerManager - Invalid cache interval');
+			console.log('>' + _serverManager.config.cache.interval);
+			process.exit();
+		}
+
+		if (!['off', 'stdout', 'file', 'mysql'].includes(_serverManager.config.log.format))
+		{
+			console.log('ServerManager - Invalid log format');
+			console.log('>' + _serverManager.config.log.format);
+			process.exit();
+		}
+	
+		if (!['off', 'stdout'].includes(_serverManager.config.log.format) && !$fs.existsSync(_serverManager.config.log.path))
+		{
+			console.log('ServerManager - Cannot access log path');
+			console.log('>' + _serverManager.config.log.path);
+			process.exit();
+		}
+	} // verifyConfig()
 
 	function initCache()
 	{
@@ -390,7 +506,7 @@ module.exports = (config) =>
 		}
 		else if (_serverManager.config.cache.format === 'mysql')
 		{
-			let p =_serverManager.mysql.verifyTable(
+			_serverManager.mysql.verifyTable(
 					'cache',
 					{
 						'section': 'VARCHAR(255) NOT NULL',
@@ -398,7 +514,7 @@ module.exports = (config) =>
 					},
 					['section']
 				)
-			p.success(() =>
+				.success(() =>
 				{
 					_serverManager.mysql.query(
 							'SELECT section, data FROM cache'
@@ -419,29 +535,34 @@ module.exports = (config) =>
 						})
 						.fail((error) =>
 						{
-							console.log('ServerManager - Unabled to read MySql cache:');
-							console.log('- ' + error);
+							console.log('ServerManager - Unabled to read MySql cache');
+							console.log('>' + error);
+							
 							process.exit();
 						});
 				})
 				.fail((error) =>
 				{
-					console.log('ServerManager - Failed to initialize MySql cache:');
-					console.log('- ' + error);
+					console.log('ServerManager - Failed to initialize MySql cache');
+					console.log('>' + error);
+					
 					process.exit();
 				});
 		}
-		else if ($fs.existsSync(_serverManager.config.cache.file))
+		else if (_serverManager.config.cache.format === 'file')
 		{
-			_cache = JSON.parse($fs.readFileSync(_serverManager.config.cache.file, 'utf8'));
-			_starting.resolve($stateCache);
-			console.log('ServerManager - File cache loaded');
-		}
-		else
-		{
-			_cache = {};
-			_starting.resolve($stateCache);
-			console.log('ServerManager - Using file cache');
+			if ($fs.existsSync(_serverManager.config.cache.file))
+			{
+				_cache = JSON.parse($fs.readFileSync(_serverManager.config.cache.file, 'utf8'));
+				_starting.resolve($stateCache);
+				console.log('ServerManager - File cache loaded');
+			}
+			else
+			{
+				_cache = {};
+				_starting.resolve($stateCache);
+				console.log('ServerManager - Using file cache');
+			}
 		}
 	} // initCache()
 
@@ -457,14 +578,18 @@ module.exports = (config) =>
 		{
 			cacheFunction = saveCacheToMySql;
 		}
-		else
+		else if (_serverManager.config.cache.format === 'file')
 		{
 			cacheFunction = saveCacheToFile;
+		}
+		else
+		{
+			return;
 		}
 
 		setInterval(
 			cacheFunction,
-			_serverManager.config.cache.interval
+			_serverManager.config.cache.interval * 1000
 		);
 	} // setCacheInterval()
 
@@ -509,8 +634,9 @@ module.exports = (config) =>
 			_serverManager.mysql.query(sql.join(''))
 				.fail((error) =>
 				{
-					console.log('ServerManager - Failed to save MySql cache:');
-					console.log('- ' + error);
+					console.log('ServerManager - Failed to save MySql cache');
+					console.log('>' + error);
+					
 				});
 
 				_altered = false;

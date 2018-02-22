@@ -1,3 +1,5 @@
+'use strict';
+
 angular.module('ServiceManagerAngularTools', [])
 .service('dictionary', function($q, $http, $rootScope)
 {
@@ -634,7 +636,10 @@ angular.module('ServiceManagerAngularTools', [])
 					return;
 				}
 
-				_buffer = angular.extend(_buffer, responseData.buffer);
+				if (responseData.buffer)
+				{
+					_buffer = angular.extend(_buffer, responseData.buffer);
+				}
 
 				if (responseData.userId)
 				{

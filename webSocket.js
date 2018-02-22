@@ -1,6 +1,7 @@
-const $ws = require('ws');
+'use strict';
 
-const Uuidv1 = require('uuid/v1');
+const $ws = require('ws');
+const $Uuidv1 = require('uuid/v1');
 
 module.exports = (serverManager) =>
 {
@@ -17,7 +18,7 @@ module.exports = (serverManager) =>
 			webSocket
 				.on('message', (message) =>
 				{
-					if (message.length > serverManager.config.web.massageSize)
+					if (message.length > serverManager.config.web.messageSizeLimit)
 					{
 						serverManager.writeLog('ws', 'message-too-large', appRequest, startTime);
 						webSocket.terminate();
@@ -36,17 +37,17 @@ module.exports = (serverManager) =>
 							requestId: json.requestId,
 							userId: json.userId,
 							action: json.action,
-							inputDataLength: message.length,
 							parameters: json.parameters,
+							inputDataLength: message.length,
 							connection:
 							{
-								remoteAddress: webSocket && webSocket._socket && webSocket._socket.remoteAddress
+								remoteAddress: webSocket._socket && webSocket._socket.remoteAddress
 							},
-							buffer: (action, parameters, response, isPermanent) =>
+							buffer: (action, parameters, responseData, isPermanent) =>
 							{
 								buffer[action] = {
 									parameters: parameters || {},
-									response: response || {},
+									response: responseData || {},
 									isPermanent: isPermanent || false
 								};
 							},
@@ -96,30 +97,35 @@ module.exports = (serverManager) =>
 						webSocket.terminate();
 						return;
 					}
-					if (webSocket.userId && webSocket.userId !== appRequest.userId)
+
+					if (webSocket.userId && appRequest.userId && webSocket.userId !== appRequest.userId)
 					{
 						serverManager.writeLog('ws', 'invalid-userId', appRequest, startTime);
 						webSocket.terminate();
 						delete _webSockets[webSocket.userId];
 						return;
 					}
-					
-					if (!appRequest.userId)
+					else if (appRequest.userId)
 					{
-						appRequest.userId = Uuidv1(); 
-					}
-					webSocket.userId = appRequest.userId;
+						webSocket.userId = appRequest.userId = appRequest.userId || $Uuidv1();
 
-					if (_webSockets[webSocket.userId] && _webSockets[webSocket.userId].webSocket !== webSocket)
+						if (_webSockets[webSocket.userId] && _webSockets[webSocket.userId].webSocket !== webSocket)
+						{
+							serverManager.writeLog('ws', 'terminate-old', appRequest, startTime);
+							_webSockets[webSocket.userId].webSocket.terminate();
+						}
+	
+						_webSockets[webSocket.userId] = {
+							webSocket: webSocket
+						};
+					}
+					else
 					{
-						serverManager.writeLog('ws', 'terminate-old', appRequest, startTime);
-						_webSockets[webSocket.userId].webSocket.terminate();
+						webSocket.userId = appRequest.userId = webSocket.userId || $Uuidv1();
+						_webSockets[webSocket.userId] = {
+							webSocket: webSocket
+						};
 					}
-
-					_webSockets[webSocket.userId] = {
-						target: null,
-						webSocket: webSocket
-					};
 
 					setTimeout(() =>
 					{
@@ -142,24 +148,33 @@ module.exports = (serverManager) =>
 		{
 			_listener = callback;
 		},
-		setUserTarget: (userId, target) =>
+		setUserGroup: (userId, groupId) =>
 		{
-			_webSockets[userId].target = target;
+			_webSockets[userId].group = groupId;
 		},
-		broadcast: (target, dataType, data) =>
+		broadcast: (groupId, dataType, data) =>
 		{
+			let startTime = new Date().getTime();
+			let appRequest = {
+				action: 'broadcast',
+				method: groupId,
+				outputDataLength: JSON.stringify(data).length
+			};
+
 			for (let userId in _webSockets)
 			{
-				if (_webSockets[userId] && _webSockets[userId].target === target)
+				if (groupId == null || _webSockets[userId].groupId === groupId)
 				{
-					_webSockets[userId].send(JSON.stringify({
+					_webSockets[userId].webSocket.send(JSON.stringify({
 						requestId: dataType,
 						userId: userId,
-						status: 'broadcast',
+						status: 'ok',
 						data: data
 					}));
 				}
 			}
-		}
+
+			serverManager.writeLog('ws', 'broadcast', appRequest, startTime);
+		} // broadcast		
 	};
 };
