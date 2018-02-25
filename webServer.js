@@ -13,7 +13,7 @@ module.exports = (serverManager) =>
 	let _port;
 	let _userGroups = {};
 	let _broadcasts = [];
-	let _root = $path.dirname(require.main.filename).appendTrail('/');
+	let _root = $path.dirname(module.filename).appendTrail('/');
 	let _listener = (request) =>
 		{
 			console.log('WebServer - Default POST listener');
