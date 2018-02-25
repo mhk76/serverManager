@@ -13,6 +13,7 @@ module.exports = (serverManager) =>
 	let _port;
 	let _userGroups = {};
 	let _broadcasts = [];
+	let _root = $path.dirname(require.main.filename).appendTrail('/');
 	let _listener = (request) =>
 		{
 			console.log('WebServer - Default POST listener');
@@ -24,8 +25,8 @@ module.exports = (serverManager) =>
 	{
 		_server = $https.createServer(
 			{
-				key: $fs.readFileSync(serverManager.config.web.httpsKeyFile),
-				cert: $fs.readFileSync(serverManager.config.web.httpsCertFile)
+				key: $fs.readFileSync(root + serverManager.config.web.httpsKeyFile),
+				cert: $fs.readFileSync(root + serverManager.config.web.httpsCertFile)
 			},
 			HttpListener
 		);
@@ -92,11 +93,11 @@ module.exports = (serverManager) =>
 
 					if (request.url === '/serviceManagerAngularTools.js')
 					{
-						file = './serviceManagerAngularTools.js';
+						file = _root + 'serviceManagerAngularTools.js';
 					}
 					else if (request.url === '/serviceManagerDialog.css')
 					{
-						file = './serviceManagerDialog.css';
+						file = _root + 'serviceManagerDialog.css';
 					}
 					else
 					{
