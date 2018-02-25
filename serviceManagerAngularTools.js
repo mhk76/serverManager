@@ -565,9 +565,9 @@ angular.module('ServiceManagerAngularTools', [])
 
 						_buffer = angular.extend(_buffer, responseData.buffer);
 						
-						for (var r in responseData.responses)
+						for (var requestId in responseData.responses)
 						{
-							var response = responseData.responses[r];
+							var response = responseData.responses[requestId];
 
 							if (response.status === 'error') 
 							{
@@ -575,9 +575,9 @@ angular.module('ServiceManagerAngularTools', [])
 								deferred.reject(response.data);
 								return;
 							}
-			
-							_sendDeferreds[response.requestId].resolve(response.data);
-							delete _sendDeferreds[response.requestId];
+		
+							_sendDeferreds[requestId].resolve(response.data);
+							delete _sendDeferreds[requestId];
 						}
 					},
 					function(response, r)
