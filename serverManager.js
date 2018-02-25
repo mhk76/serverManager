@@ -26,8 +26,8 @@ module.exports = (config) =>
 	_serverManager.config = config || {};
 
 	_serverManager.config.app = _serverManager.config.app || {};
-	_serverManager.config.app.file = _root + (_serverManager.config.app.file || './app.js');
-	_serverManager.config.app.watchModules = (_serverManager.config.app.watchModules == true);
+	_serverManager.config.app.file = (_serverManager.config.app.file ? _root + _serverManager.config.app.file : null);
+	_serverManager.config.app.watchModules = (_serverManager.config.app.watchModules == true) && (_serverManager.config.app.file !== null);
 
 	_serverManager.config.web = _serverManager.config.web || {};
 	_serverManager.config.web.root = _root + (_serverManager.config.web.root || './web/').appendTrail('/');
@@ -51,12 +51,17 @@ module.exports = (config) =>
 
 	_serverManager.Promise = $Promise;
 
-	let _app = require(_serverManager.config.app.file);
-
-	if (typeof _app.start !== 'function')
+	let _app = null;
+	
+	if (_serverManager.config.app.file)
 	{
-		console.log('ServerManager - The application does not have start() method');
-		process.exit();
+		_app = require(_serverManager.config.app.file);
+
+		if (typeof _app.start !== 'function')
+		{
+			console.log('ServerManager - The application does not have start() method');
+			process.exit();
+		}
 	}
 
 	let _starting = new $Promise()
@@ -86,9 +91,12 @@ module.exports = (config) =>
 
 			if (_startState === $stateLoaded)
 			{
-				_app.start(_serverManager);
+				if (_app)
+				{
+					_app.start(_serverManager);
+				}
 				console.log('ServerManager - App started');
-				_serverManagerStart.resolve();
+				_serverManagerStart.resolve(_serverManager);
 			}
 		});
 
@@ -392,6 +400,11 @@ module.exports = (config) =>
 
 	_serverManager.restartApp = () =>
 	{
+		if (_app === null)
+		{
+			return;
+		}
+
 		console.log('ServerManager - Recycling modules');
 
 		if (_app.subModules)
@@ -433,7 +446,7 @@ module.exports = (config) =>
 
 	function verifyConfig()
 	{
-		if (!$fs.existsSync(_serverManager.config.app.file))
+		if (_serverManager.config.app.file && !$fs.existsSync(_serverManager.config.app.file))
 		{
 			console.log('ServerManager - Application file was not found');
 			console.log('>' + _serverManager.config.app.file);
@@ -595,7 +608,7 @@ module.exports = (config) =>
 
 	function saveCacheToMongoDB()
 	{
-		if (_app.saveCache)
+		if (_app && _app.saveCache)
 		{
 			_app.saveCache();
 		}
@@ -608,7 +621,7 @@ module.exports = (config) =>
 	
 	function saveCacheToMySql()
 	{
-		if (_app.saveCache)
+		if (_app && _app.saveCache)
 		{
 			_app.saveCache();
 		}
@@ -645,7 +658,7 @@ module.exports = (config) =>
 
 	function saveCacheToFile()
 	{
-		if (_app.saveCache)
+		if (_app && _app.saveCache)
 		{
 			_app.saveCache();
 		}

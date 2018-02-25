@@ -190,12 +190,12 @@ module.exports = (serverManager) =>
 							responseData[action.requestId] = data;
 						});
 
-						if (buffer[action.command] && buffer[action.command].parameters.equals(action.parameters))
+						if (buffer[action.action] && buffer[action.action].parameters.equals(action.parameters))
 						{
-							promise.resolve(buffer[action.command].response);
-							if (!buffer[action.command].isPermanent)
+							promise.resolve(buffer[action.action].response);
+							if (!buffer[action.action].isPermanent)
 							{
-								delete buffer[action.command];
+								delete buffer[action.action];
 							}
 							return;
 						}
@@ -204,7 +204,7 @@ module.exports = (serverManager) =>
 						{
 							_listener({
 								userId: userId,
-								action: action.command,
+								action: action.action,
 								parameters: action.parameters,
 								inputDataLength: inputData.length,
 								connection:
@@ -222,7 +222,6 @@ module.exports = (serverManager) =>
 								response: (data, status) =>
 								{
 									promise.resolve({
-										userId: userId,
 										status: status || 'ok',
 										data: data || {}
 									});
@@ -230,7 +229,7 @@ module.exports = (serverManager) =>
 								terminate: () =>
 								{
 									let appRequest = {
-										action: action.command,
+										action: action.action,
 										parameters: action.parameters,
 										inputDataLength: inputData.length,
 										connection:
@@ -269,11 +268,7 @@ module.exports = (serverManager) =>
 
 								if (i !== -1)
 								{
-									let data = _broadcasts[b].data;
-
-									data.userId = _broadcasts[b].userIds[i];
-
-									responseData[_broadcasts[b].requestId] = data;
+									responseData[_broadcasts[b].requestId] = _broadcasts[b].data;
 
 									_broadcasts[b].userIds[i].splice(i, 1);
 									if (_broadcasts[b].userIds === 0)
@@ -284,11 +279,7 @@ module.exports = (serverManager) =>
 							}
 							else
 							{
-								let data = _broadcasts[b].data;
-
-								data.userId = userId;
-
-								responseData[_broadcasts[b].requestId] = data;
+								responseData[_broadcasts[b].requestId] = _broadcasts[b].data;
 							}
 						}
 
@@ -297,20 +288,22 @@ module.exports = (serverManager) =>
 							_broadcasts.splice(r - 1, 1);
 						}
 
-						let outputData = JSON.stringify({
-							userId: request.userId,
+						let outputJSON = {
+							userId: userId,
 							responses: responseData
-						});
+						};
 
 						if (Object.keys(buffer).length > 0)
 						{
-							outputData['buffer'] = buffer;
+							outputJSON['buffer'] = buffer;
 						}
 
+						let outputData = JSON.stringify(outputJSON);
+						
 						let appRequest = {
 							action: json.actions.map((item) =>
 								{
-									return item.command;
+									return item.action;
 								}).join(' '),
 							inputDataLength: inputData.length,
 							outputDataLength: outputData.length,

@@ -506,17 +506,17 @@ angular.module('ServiceManagerAngularTools', [])
 			userId = cookie.read('userId');
 		}
 
-		var message = {
+		var requestData = {
 			requestId: requestId,
-			command: action
+			action: action
 		};
 
 		if (parameters)
 		{
-			message.parameters = parameters;
+			requestData.parameters = parameters;
 		}
 
-		_sendBuffer.push(message);
+		_sendBuffer.push(requestData);
 
 		if (_sendTimer)
 		{

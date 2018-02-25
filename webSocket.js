@@ -53,23 +53,25 @@ module.exports = (serverManager) =>
 							},
 							response: (data, status) =>
 							{
-								let outputData = JSON.stringify({
+								let outputJSON = {
 									requestId: appRequest.requestId,									
 									userId: appRequest.userId,
 									status: status || 'ok',
 									data: data || {}
-								});
+								};
 
 								if (Object.keys(buffer).length > 0)
 								{
-									outputData['buffer'] = buffer;
+									outputJSON['buffer'] = buffer;
 								}
+
+								let outputData = JSON.stringify(outputJSON);
 
 								appRequest.outputDataLength = outputData.length;
 
-								serverManager.writeLog('ws', 'response', appRequest, startTime);
-
 								webSocket.send(outputData);
+
+								serverManager.writeLog('ws', 'response', appRequest, startTime);
 							},
 							terminate: () =>
 							{
