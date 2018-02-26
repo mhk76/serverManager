@@ -91,13 +91,13 @@ module.exports = (serverManager) =>
 					let url = $path.parse(request.url);
 					let file;
 
-					if (request.url === '/serviceManagerAngularTools.js')
+					if (request.url === '/serverManagerTools.angular.js')
 					{
-						file = _root + 'serviceManagerAngularTools.js';
+						file = _root + 'serverManagerTools.angular.js';
 					}
-					else if (request.url === '/serviceManagerDialog.css')
+					else if (request.url === '/serverManagerDialog.css')
 					{
-						file = _root + 'serviceManagerDialog.css';
+						file = _root + 'serverManagerDialog.css';
 					}
 					else
 					{

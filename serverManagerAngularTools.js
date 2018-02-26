@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('ServiceManagerAngularTools', [])
+angular.module('ServerManagerAngularTools', [])
 .service('dictionary', function($q, $http, $rootScope)
 {
 	var _service = this;
@@ -174,8 +174,8 @@ angular.module('ServiceManagerAngularTools', [])
 
 		if (!_dialog[_dialogIndex])
 		{
-			_dialog[_dialogIndex] = $('<div class="dialog level' + (_dialogIndex % 3) + ' ng-hide" data-ng-controller="DialogController"><span class="message"></span><p></p><div class="buttons"></div></div>');
-			_dialogMask[_dialogIndex] = $('<div class="dialogMask level' + (_dialogIndex % 3) + ' ng-hide"></div>');
+			_dialog[_dialogIndex] = $('<div class="smDialog level' + (_dialogIndex % 3) + ' ng-hide" data-ng-controller="DialogController"><span class="message"></span><p></p><div class="buttons"></div></div>');
+			_dialogMask[_dialogIndex] = $('<div class="smDialogMask level' + (_dialogIndex % 3) + ' ng-hide"></div>');
 			$(document.body)
 				.append(_dialog[_dialogIndex])
 				.append(_dialogMask[_dialogIndex]);

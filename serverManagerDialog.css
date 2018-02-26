@@ -1,4 +1,4 @@
-.dialogMask {
+.smDialogMask {
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -7,14 +7,14 @@
 	background: #004;
 	opacity: 0.5;
 }
-.dialogMask.level1 {
+.smDialogMask.level1 {
 	background: #400;
 }
-.dialogMask.level2 {
+.smDialogMask.level2 {
 	background: #020;
 }
 
-.dialog {
+.smDialog {
 	position: fixed;
 	top: 10%;
 	left: calc(50% - 22rem);
@@ -23,25 +23,25 @@
 	padding: 1rem 2rem;
 	background: #fff;
 }
-.dialog.level1 {
+.smDialog.level1 {
 	top: calc(10% + 2rem);
 	left: calc(50% - 27rem);
 	width: 50rem;
 }
-.dialog.level2 {
+.smDialog.level2 {
 	top: calc(10% + 3rem);
 	left: calc(50% - 20rem);
 	width: 30rem;
 }
-.dialog > .message {
+.smDialog > .message {
 	font-size: 115%;
 	font-variant: small-caps;
 }
-.dialog span {
+.smDialog span {
 	display: block;
 	margin: 0.5rem 0;
 }
-.dialog span.box {
+.smDialog span.box {
 	max-height: 15rem;
 	padding: 0.1rem 0.2rem;
 	border-top: 1px solid #888;
@@ -49,27 +49,27 @@
 	border-bottom: 1px solid #888;
 	overflow-y: scroll;
 }
-.dialog span.indent {
+.smDialog span.indent {
 	display: inline-block;
 	width: 1rem;
 	margin: 0;
 	text-align: center;
 }
-.dialog span.info {
+.smDialog span.info {
 	font-size: 90%;
 }
-.dialog span.inline {
+.smDialog span.inline {
 	display: inline-block;
 }
-.dialog span.inline + span.inline {
+.smDialog span.inline + span.inline {
 	margin-left: 0.5rem;
 }
-.dialog div {
+.smDialog div {
 	margin-top: 0.5rem;
 	border-top: 1px solid #eee;
 	padding-top: 0.5rem;
 	text-align: right;
 }
-.dialog div button {
+.smDialog div button {
 	margin-left: 0.2rem;
 }
