@@ -95,6 +95,10 @@ module.exports = (serverManager) =>
 					{
 						file = _root + 'serverManagerTools.angular.js';
 					}
+					else if (request.url === '/serverManagerTools.jquery.js')
+					{
+						file = _root + 'serverManagerTools.jquery.js';
+					}
 					else if (request.url === '/serverManagerDialog.css')
 					{
 						file = _root + 'serverManagerDialog.css';

@@ -1,26 +1,31 @@
 'use strict';
 
 angular.module('ServerManagerAngularTools', [])
-.service('dictionary', function($q, $http, $rootScope)
+.service('dictionary', function($rootScope, $q, $http)
 {
-	var _service = this;
-	var _dictionary = {};
-	var _loader = $q.defer();
-	var _lang = null;
+	let _service = this;
+	let _dictionary = {};
+	let _loader = $q.defer();
+	let _lang = null;
 
 	_service.lang = null;
 
 	_service.setLang = function(lang)
 	{
-		_lang = lang;
-		$rootScope.$broadcast('dictionary-setLanguage', lang);
+		if (_dictionary[lang])
+		{
+			_lang = lang;
+			$rootScope.$broadcast('dictionary-setLanguage', lang);
+			return true;
+		}
+		return false;
 	}
 
 	_service.get = function(term, index, defaultValue)
 	{
 		if (defaultValue === undefined && typeof index === 'string')
 		{
-			return (_dictionary[_lang] && _dictionary[_lang][term]) || defaultValue;
+			return (_dictionary[_lang] && _dictionary[_lang][term]) || index;
 		}
 		if (index === undefined)
 		{
@@ -35,9 +40,9 @@ angular.module('ServerManagerAngularTools', [])
 
 	_service.getLanguages = function()
 	{
-		var list = {};
+		let list = {};
 
-		for (var lang in _dictionary)
+		for (let lang in _dictionary)
 		{
 			list[lang] = _dictionary[lang]['_lang'];
 		}
@@ -51,11 +56,16 @@ angular.module('ServerManagerAngularTools', [])
 
 	_service.formatDate = function(date, format)
 	{
-		var dateStr = _service.get(format || '_date', '%yyyy-%mm-%dd');
-		var month = date.getMonth() + 1;
-		var day = date.getDate();
-		var hours = date.getHours();
-		var minutes = date.getMinutes();
+		if (typeof date === 'string')
+		{
+			date = new Date(date);
+		}
+
+		let dateStr = _service.get(format || '_date', '%yyyy-%mm-%dd');
+		let month = date.getMonth() + 1;
+		let day = date.getDate();
+		let hours = date.getHours();
+		let minutes = date.getMinutes();
 
 		if (dateStr.indexOf('%a') === -1)
 		{
@@ -105,8 +115,10 @@ angular.module('ServerManagerAngularTools', [])
 			{
 				_dictionary = response.data;
 
-				for (var lang in window.navigator.languages)
+				for (let i in window.navigator.languages)
 				{
+					let lang = window.navigator.languages[i];
+
 					if (_dictionary[lang])
 					{
 						_lang = lang;
@@ -136,7 +148,7 @@ angular.module('ServerManagerAngularTools', [])
 
 	function leftPad(number, length, padChar)
 	{
-		var output = number.toString();
+		let output = number.toString();
 
 		if (output.length < length)
 		{
@@ -150,11 +162,11 @@ angular.module('ServerManagerAngularTools', [])
 })
 .factory('showDialog', function($compile, dictionary)
 {
-	var _dialog = [];
-	var _dialogMask = [];
-	var _dialogIndex = -1;
-	var _hotkeyMap = {};
-	var _hotkeyList = [];
+	let _dialog = [];
+	let _dialogMask = [];
+	let _dialogIndex = -1;
+	let _hotkeyMap = {};
+	let _hotkeyList = [];
 
 	function onkeypress(event)
 	{
@@ -168,7 +180,7 @@ angular.module('ServerManagerAngularTools', [])
 	{
 		++_dialogIndex;
 
-		var _service = this;
+		let _service = this;
 
 		document.body.style.overflow = 'hidden';
 
@@ -181,13 +193,13 @@ angular.module('ServerManagerAngularTools', [])
 				.append(_dialogMask[_dialogIndex]);
 		}
 
-		var messageText;
+		let messageText;
 		
-		if (angular.isArray(messageText))
+		if (angular.isArray(message))
 		{
 			messageText = dictionary.get(message[0]);
 
-			for (var i = 1; i < message.length; i++)
+			for (let i = 1; i < message.length; i++)
 			{
 				messageText = messageText.replace(message[i].key, dictionary.get(message[i].message, message[i].index));
 			}
@@ -197,12 +209,12 @@ angular.module('ServerManagerAngularTools', [])
 			messageText = dictionary.get(message);
 		}
 
-		var dialog = _dialog[_dialogIndex];
-		var dialogMask = _dialogMask[_dialogIndex];
-		var dialogElements = dialog.find('p');
-		var dialogButtons = dialog.find('div');
-		var templateElements = {};
-		var firstElement;
+		let dialog = _dialog[_dialogIndex];
+		let dialogMask = _dialogMask[_dialogIndex];
+		let dialogElements = dialog.find('p');
+		let dialogButtons = dialog.find('div');
+		let templateElements = {};
+		let firstElement;
 		
 		_hotkeyMap = {};
 		_hotkeyList = [];
@@ -213,10 +225,10 @@ angular.module('ServerManagerAngularTools', [])
 
 		if (template)
 		{
-			for (var i = 0; i < template.length; i++)
+			for (let i = 0; i < template.length; i++)
 			{
-				var item = template[i];
-				var element = $('<span></span>');
+				let item = template[i];
+				let element = $('<span></span>');
 
 				element.attr('class', item.class);
 
@@ -238,7 +250,7 @@ angular.module('ServerManagerAngularTools', [])
 					case 'range':
 					case 'search':
 					{
-						var input = $('<input/>');
+						let input = $('<input/>');
 
 						input.attr('type', item.type === 'input' ? 'text' : item.type);
 						input.attr('maxlength', item.maxlength);
@@ -282,11 +294,11 @@ angular.module('ServerManagerAngularTools', [])
 			}];
 		}
 
-		for (var i = 0; i < buttons.length; i++)
+		for (let i = 0; i < buttons.length; i++)
 		{
-			var button = buttons[i];
+			let button = buttons[i];
 
-			var element = $('<button></button>');				
+			let element = $('<button></button>');				
 
 			element.text(dictionary.get(button.text, button.index));
 			element[0].clickEvent = button.onclick; 
@@ -296,7 +308,7 @@ angular.module('ServerManagerAngularTools', [])
 				{
 					if (this.clickEvent) 
 					{
-						var returnValue = this.clickEvent(templateElements);
+						let returnValue = this.clickEvent(templateElements);
 
 						if (returnValue)
 						{
@@ -437,10 +449,10 @@ angular.module('ServerManagerAngularTools', [])
 {
 	this.read = function(name)
 	{
-		var cookies = document.cookie.split('; ');
-		var match = escape(name) + '=';
+		let cookies = document.cookie.split('; ');
+		let match = escape(name) + '=';
 
-		for (var cookie in cookies)
+		for (let cookie in cookies)
 		{
 			if (cookie.substr(0, match.length) === match)
 			{
@@ -461,11 +473,11 @@ angular.module('ServerManagerAngularTools', [])
 })
 .service('http', function($http, $q, $timeout, cookie, dialog)
 {
-	var _service = this;
-	var _buffer = {};
-	var _sendTimer = null;
-	var _sendBuffer = [];
-	var _sendDeferreds = {};
+	let _service = this;
+	let _buffer = {};
+	let _sendTimer = null;
+	let _sendBuffer = [];
+	let _sendDeferreds = {};
 
 	_service.options = {
 		httpDelay: 10
@@ -478,7 +490,7 @@ angular.module('ServerManagerAngularTools', [])
 
 	_service.fetch = function(action, parameters)
 	{
-		var deferred = $q.defer();
+		let deferred = $q.defer();
 
 		if (_buffer[action] && angular.equals(parameters, _buffer[action].parameters))
 		{
@@ -492,8 +504,8 @@ angular.module('ServerManagerAngularTools', [])
 			return deferred.promise;
 		}
 
-		var requestId = new Date().getTime() + Math.random();
-		var userId;
+		let requestId = new Date().getTime() + Math.random();
+		let userId;
 
 		_sendDeferreds[requestId] = deferred;
 		
@@ -506,7 +518,7 @@ angular.module('ServerManagerAngularTools', [])
 			userId = cookie.read('userId');
 		}
 
-		var requestData = {
+		let requestData = {
 			requestId: requestId,
 			action: action
 		};
@@ -528,7 +540,7 @@ angular.module('ServerManagerAngularTools', [])
 				$timeout.cancel(_sendTimer);
 				_sendTimer = null;
 
-				var sendData = {
+				let sendData = {
 					actions: _sendBuffer
 				};
 
@@ -545,7 +557,7 @@ angular.module('ServerManagerAngularTools', [])
 				.then(
 					function(responseObject)
 					{
-						var responseData = responseObject.data;
+						let responseData = responseObject.data;
 
 						if (responseData.userId)
 						{
@@ -565,9 +577,9 @@ angular.module('ServerManagerAngularTools', [])
 
 						_buffer = angular.extend(_buffer, responseData.buffer);
 						
-						for (var requestId in responseData.responses)
+						for (let requestId in responseData.responses)
 						{
-							var response = responseData.responses[requestId];
+							let response = responseData.responses[requestId];
 
 							if (response.status === 'error') 
 							{
@@ -597,8 +609,8 @@ angular.module('ServerManagerAngularTools', [])
 })
 .service('webSocket', function($q, cookie, dialog)
 {
-	var _service = this;
-	var _loader = $q.defer();
+	let _service = this;
+	let _loader = $q.defer();
 
 	_service.options = {};
 	_service.loader = _loader.promise;
@@ -612,22 +624,22 @@ angular.module('ServerManagerAngularTools', [])
 		return;
 	}
 
-	var _webSocket;
-	var _requests = {};
-	var _listeners = {};
-	var _buffer = {};
-	var _protocol = (location.protocol === 'https' ? 'wss://' : 'ws://');
+	let _webSocket;
+	let _requests = {};
+	let _listeners = {};
+	let _buffer = {};
+	let _protocol = (location.protocol === 'https' ? 'wss://' : 'ws://');
 
 	function Connect()
 	{
-		var webSocket = new WebSocket(_protocol + location.host);
+		let webSocket = new WebSocket(_protocol + location.host);
 
 		webSocket.onmessage = function(messageEvent)
 		{
 			try
 			{
-				var responseData = JSON.parse(messageEvent.data);
-				var deferred = _requests[response.requestId];
+				let responseData = JSON.parse(messageEvent.data);
+				let deferred = _requests[responseData.requestId];
 
 				if (responseData.status === 'error') 
 				{
@@ -657,7 +669,7 @@ angular.module('ServerManagerAngularTools', [])
 					}
 				}
 
-				for (var key in _listeners)
+				for (let key in _listeners)
 				{
 					if (key === responseData.requestId)
 					{
@@ -711,7 +723,7 @@ angular.module('ServerManagerAngularTools', [])
 	{
 		if (_buffer[action] && angular.equals(parameters, _buffer[action].parameters))
 		{
-			var deferred = $q.defer();
+			let deferred = $q.defer();
 
 			deferred.resolve(_buffer[action].response);
 
@@ -723,12 +735,12 @@ angular.module('ServerManagerAngularTools', [])
 			return deferred.promise;
 		}
 
-		var sendData = {
+		let sendData = {
 			requestId: new Date().getTime() + Math.random(),
 			action: action
 		};
 
-		var userId;
+		let userId;
 
 		if (localStorage && localStorage.getItem)
 		{
@@ -752,7 +764,7 @@ angular.module('ServerManagerAngularTools', [])
 			sendData.parameters = parameters;
 		}
 			
-		var deferred = _requests[sendData.requestId] = $q.defer();		
+		let deferred = _requests[sendData.requestId] = $q.defer();		
 
 		if (_webSocket.readyState === 1)
 		{
@@ -768,15 +780,15 @@ angular.module('ServerManagerAngularTools', [])
 })
 .service('server', function($q, http, webSocket)
 {
-	var _service = this;
-	var _loader = $q.defer();
-	var _server;
+	let _service = this;
+	let _loader = $q.defer();
+	let _server;
 
 	_service.loader = _loader.promise;
 
 	_service.start = function(options)
 	{
-		var services = [];
+		let services = [];
 
 		options.webSocket = options.webSocket && webSocket.supported;
 
@@ -810,7 +822,7 @@ angular.module('ServerManagerAngularTools', [])
 
 	_service.readStore = function(name, defaultValue)
 	{
-		var value;
+		let value;
 
 		if (localStorage && localStorage.getItem)
 		{
@@ -868,7 +880,7 @@ angular.module('ServerManagerAngularTools', [])
 		restrict: 'A',
 		link: function($scope, $element)
 		{
-			var element = $element[0];
+			let element = $element[0];
 			element.onselectstart = function() { return false; };
 			element.style.MozUserSelect = "none";
 			element.style.KhtmlUserSelect = "none";
@@ -884,14 +896,14 @@ angular.module('ServerManagerAngularTools', [])
 		{
 			dictionary.loader.then(function()
 			{
-				$element.html(dictionary.get($attributes.dicText, $attributes.dicIndex));
+				$element.html(dictionary.get($attributes.dicText, $attributes.dicTextIndex));
 			});
 
 			$scope.$on(
 				'dictionary-setLanguage',
 				function()
 				{
-					$element.html(dictionary.get($attributes.dicText, $attributes.dicIndex));
+					$element.html(dictionary.get($attributes.dicText, $attributes.dicTextIndex));
 				}
 			);
 		}
@@ -905,14 +917,14 @@ angular.module('ServerManagerAngularTools', [])
 		{
 			dictionary.loader.then(function()
 			{
-				$element.attr('title', dictionary.get($attributes.dicTitle, $attributes.dicIndex));
+				$element.attr('title', dictionary.get($attributes.dicTitle, $attributes.dicTitleIndex));
 			});
 
 			$scope.$on(
 				'dictionary-setLanguage',
 				function()
 				{
-					$element.attr('title', dictionary.get($attributes.dicText, $attributes.dicIndex));
+					$element.attr('title', dictionary.get($attributes.dicText, $attributes.dicTitleIndex));
 				}
 			);
 		}
@@ -930,11 +942,11 @@ angular.module('ServerManagerAngularTools', [])
 
 			$controller.$formatters.push(function(d)
 			{
-				var dt = new Date(d);
+				let dt = new Date(d);
 				return dt.getFullYear() + '-' + (dt.getMonth() + 1).padLeft(2) + '-' + dt.getDate().padLeft(2);
 			});
 
-            var release = $scope.$watch(
+            let release = $scope.$watch(
 				$attributes.ngModel,
 				function (value)
 				{
@@ -952,11 +964,22 @@ angular.module('ServerManagerAngularTools', [])
         }
     }
 })
+.filter('dictionary', function(dictionary)
+{
+	let filter = function(text)
+	{
+		return dictionary.get(text);
+	};
+
+	filter.$stateful = true;
+
+	return filter;
+})
 .filter('formatDate', function(dictionary)
 {
-	var filter = function(date)
+	let filter = function(date)
 	{
-		var dt = new Date(date);
+		let dt = new Date(date);
 
 		if (dt == 'Invalid date')
 		{
@@ -971,9 +994,9 @@ angular.module('ServerManagerAngularTools', [])
 })
 .filter('formatDateTime', function(dictionary)
 {
-	var filter = function(date)
+	let filter = function(date)
 	{
-		var dt = new Date(date);
+		let dt = new Date(date);
 
 		if (dt == 'Invalid date')
 		{

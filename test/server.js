@@ -39,6 +39,11 @@ exports.start = (serverManager) =>
 					300
 				);
 				break;
+			case 'save':
+				serverManager.cache(request.userId, request.parameters);
+				break;
+			case 'load':
+				request.response(serverManager.cache(request.userId));
 		}
 	});
 };
