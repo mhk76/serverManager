@@ -25,9 +25,9 @@ module.exports = (config) =>
 
 	_serverManager.config = config || {};
 
-	_serverManager.config.app = _serverManager.config.app || {};
-	_serverManager.config.app.file = (_serverManager.config.app.file ? _root + _serverManager.config.app.file : null);
-	_serverManager.config.app.watchModules = (_serverManager.config.app.watchModules == true) && (_serverManager.config.app.file !== null);
+	_serverManager.config.server = _serverManager.config.server || {};
+	_serverManager.config.server.file = (_serverManager.config.server.file ? _root + _serverManager.config.server.file : null);
+	_serverManager.config.server.watchModules = (_serverManager.config.server.watchModules == true) && (_serverManager.config.server.file !== null);
 
 	_serverManager.config.web = _serverManager.config.web || {};
 	_serverManager.config.web.root = _root + (_serverManager.config.web.root || './web/').appendTrail('/');
@@ -52,14 +52,14 @@ module.exports = (config) =>
 	_serverManager.Promise = $Promise;
 
 	let _app = null;
-	
-	if (_serverManager.config.app.file)
+
+	if (_serverManager.config.server.file)
 	{
-		_app = require(_serverManager.config.app.file);
+		_app = require(_serverManager.config.server.file);
 
 		if (typeof _app.start !== 'function')
 		{
-			logExit('The application does not have start() method');
+			logExit('The application does not export start() method');
 		}
 	}
 
@@ -101,59 +101,62 @@ module.exports = (config) =>
 
 	if (_serverManager.config.log.format === 'mongoose'
 		|| _serverManager.config.cache.format === 'mongoose'
-		|| _serverManager.config.app.database === 'mongoose'
+		|| _serverManager.config.server.database === 'mongoose'
 	)
 	{
 		_serverManager.mongoose = module.parent.require('mongoose');
-		_serverManager.mongoose.connect(_serverManager.config.mongoose);
-		
-		_mongoose = {
-			log: _serverManager.mongoose.model(
-					'log',
-					_serverManager.mongoose.Schema({
-						logId     : _serverManager.mongoose.Schema.ObjectId,
-						protocol  : String,
-						status    : String,
-						duration  : Number,
-						action    : String,
-						method    : String,
-						ip        : String,
-						input     : Number,
-						output    : Number,
-						error     : String 
-					})
-				),
-			cache: _serverManager.mongoose.model(
-					'cache',
-					_serverManager.mongoose.Schema({
-						section   : String,
-						data      : Object
-					})
-				)
-		};
-		
-		_serverManager.mongoose.connection.once('open', () =>
-		{
-			logInfo('Mongoose connection opened');
+		_serverManager.mongoose.connect(_serverManager.config.mongoose)
+			.then((data) => {
+				_mongoose = {
+					Log: _serverManager.mongoose.model(
+							'log',
+							{
+								protocol  : String,
+								status    : String,
+								duration  : Number,
+								action    : String,
+								method    : String,
+								ip        : String,
+								input     : Number,
+								output    : Number,
+								error     : String 
+							},
+							'log'
+						),
+					Cache: _serverManager.mongoose.model(
+							'cache',
+							{
+								name   : String,
+								data   : Object
+							},
+							'cache'
+						)
+				};
 
-			if (_serverManager.config.app.database === 'mongoose')
+				logInfo('Mongoose connection opened');
+		
+				if (_serverManager.config.server.database === 'mongoose')
+				{
+					_starting.resolve($stateData);
+				}
+				if (_serverManager.config.log.format === 'mongoose')
+				{
+					_starting.resolve($stateLog);
+				}
+				if (_serverManager.config.cache.format === 'mongoose')
+				{
+					initCache();
+				}
+			}) // then()
+			.catch((error) =>
 			{
-				_starting.resolve($stateData);
-			}
-			if (_serverManager.config.log.format === 'mongoose')
-			{
-				_starting.resolve($stateLog);
-			}
-			if (_serverManager.config.cache.format === 'mongoose')
-			{
-				initCache();
-			}
-		});
+				logExit('Unabled to connect to MongoDB database', error);
+			});
 	}
 
 	if (_serverManager.config.log.format === 'mysql'
 		|| _serverManager.config.cache.format === 'mysql'
-		|| _serverManager.config.app.database === 'mysql'
+		|| _serverManager.config.server.database === 'mysql'
 	)
 	{
 		_serverManager.mysql = require('./mysql.js')(_serverManager.config.mysql);
@@ -162,7 +165,7 @@ module.exports = (config) =>
 			{
 				logInfo('MySql connected');
 
-				if (_serverManager.config.app.database === 'mysql')
+				if (_serverManager.config.server.database === 'mysql')
 				{
 					_starting.resolve($stateData);
 				}				
@@ -209,7 +212,7 @@ module.exports = (config) =>
 			});
 	}
 	
-	if (_serverManager.config.app.database !== 'mongoose' && _serverManager.config.app.database !== 'mysql')
+	if (_serverManager.config.server.database !== 'mongoose' && _serverManager.config.server.database !== 'mysql')
 	{
 		_starting.resolve($stateData);
 	}
@@ -240,10 +243,10 @@ module.exports = (config) =>
 		logInfo('No cache backup');
 	}
 
-	if (_serverManager.config.app.watchModules)
+	if (_serverManager.config.server.watchModules)
 	{
 		let restartTimer = null;
-		let modules = [_serverManager.config.app.file];
+		let modules = [_serverManager.config.server.file];
 		let filenames = [];
 
 		if (_app.subModules)
@@ -365,7 +368,11 @@ module.exports = (config) =>
 
 		if (_serverManager.config.log.format === 'mongoose')
 		{
-			// TODO: mongoose 
+			(new _mongoose.Log(data)).save()
+				.catch((error) =>
+				{
+					logError('Failed to write log entry', error)
+				});
 		}
 		else if (_serverManager.config.log.format === 'mysql')
 		{
@@ -405,9 +412,9 @@ module.exports = (config) =>
 			});
 		}
 
-		delete require.cache[require.resolve(_serverManager.config.app.file)];
+		delete require.cache[require.resolve(_serverManager.config.server.file)];
 
-		_app = require(_serverManager.config.app.file);
+		_app = require(_serverManager.config.server.file);
 		_app.start(_serverManager);
 
 		logInfo('App restarted');
@@ -436,9 +443,9 @@ module.exports = (config) =>
 
 	function verifyConfig()
 	{
-		if (_serverManager.config.app.file && !$fs.existsSync(_serverManager.config.app.file))
+		if (_serverManager.config.server.file && !$fs.existsSync(_serverManager.config.server.file))
 		{
-			logExit('Application file was not found', _serverManager.config.app.file);
+			logExit('Application file was not found', _serverManager.config.server.file);
 		}
 	
 		if (!$fs.existsSync(_serverManager.config.web.root + _serverManager.config.web.defaultFile))
@@ -461,7 +468,7 @@ module.exports = (config) =>
 			logExit('Invalid message size limit', _serverManager.config.web.messageSizeLimit);
 		}
 	
-		if (!['off', 'file', 'mysql'].includes(_serverManager.config.cache.format))
+		if (!['off', 'file', 'mysql', 'mongoose'].includes(_serverManager.config.cache.format))
 		{
 			logExit('Invalid cache format', _serverManager.config.cache.format);
 		}
@@ -471,12 +478,12 @@ module.exports = (config) =>
 			logExit('Invalid cache interval', _serverManager.config.cache.interval);
 		}
 
-		if (!['off', 'stdout', 'file', 'mysql'].includes(_serverManager.config.log.format))
+		if (!['off', 'stdout', 'file', 'mysql', 'mongoose'].includes(_serverManager.config.log.format))
 		{
 			logExit('Invalid log format', _serverManager.config.log.format);
 		}
 	
-		if (!['off', 'stdout'].includes(_serverManager.config.log.format) && !$fs.existsSync(_serverManager.config.log.path))
+		if (_serverManager.config.log.format === 'file' && !$fs.existsSync(_serverManager.config.log.path))
 		{
 			logExit('Cannot access log path', _serverManager.config.log.path);
 		}
@@ -486,25 +493,26 @@ module.exports = (config) =>
 	{
 		if (_serverManager.config.cache.format === 'mongoose')
 		{
-			_mongoose.log.find({}, (error, data) =>
-			{
-				if (error)
+			_mongoose.Cache.find({})
+				.then((data) =>
+				{
+					data.forEach((section) =>
+					{
+						_cache[section.name] = {
+							altered: false,
+							_id: section._id,
+							data: section.data
+						};
+					});
+
+					logInfo('MongoDB cache loaded');
+
+					_starting.resolve($stateCache);
+				})
+				.catch((error) =>
 				{
 					logExit('Failed to initialize MongoDB cache', error);
-				}
-
-				for (let section in data)
-				{
-					_cache[section] = {
-						altered: false,
-						data: data[section]
-					};
-				}
-
-				logInfo('MongoDB cache loaded');
-
-				_starting.resolve($stateCache);
-			});
+				});
 		}
 		else if (_serverManager.config.cache.format === 'mysql')
 		{
@@ -598,7 +606,24 @@ module.exports = (config) =>
 	
 		if (_altered)
 		{
-			// TODO: mongoose - write cache
+			for (let section in _cache)
+			{
+				let entry = new _mongoose.Cache({
+					_id: _cache[section]._id,
+					name: section,
+					data: _cache[section].data
+				});
+				entry.isNew = !_cache[section]._id;
+				entry.save()
+					.then((data) =>
+					{
+						_cache[section]._id = data._id;
+					})
+					.catch((error) =>
+					{
+						logError('Failed to save cache into MongoDB', error);
+					});
+			}
 		}
 	} // function saveCacheToMongoDB()
 	
