@@ -30,7 +30,7 @@ describe('ServerManager', () =>
 				"cache": {
 					"format": "off"
 				}
-			}).success((serverManager) =>
+			}).then((serverManager) =>
 			{
 				_serverManager = serverManager;
 				resolve();

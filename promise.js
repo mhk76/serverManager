@@ -5,29 +5,25 @@ module.exports = function Promise()
 	promise.resolved = false;
 	promise.failed = false;
 
-	promise.success = (callback) =>
+	promise.then = (callback) =>
 	{
 		promise.successCallback = callback;
 
-		if (promise.failed)
-		{
-			return promise;
-		}
 		if (promise.resolved)
 		{
-			callback(promise.result);
+			return callback(promise.result);
 		}
 
 		return promise;
 	};
 
-	promise.fail = (callback) =>
+	promise.catch = (callback) =>
 	{
 		promise.failCallback = callback;
 
 		if (promise.failed)
 		{
-			callback(promise.error);
+			return callback(promise.error);
 		}
 
 		return promise;
@@ -38,6 +34,7 @@ module.exports = function Promise()
 		promise.resolved = true;
 		promise.failed = false;
 		promise.result = data;
+
 		delete promise.error;
 
 		if (promise.successCallback)
@@ -54,8 +51,9 @@ module.exports = function Promise()
 	{
 		promise.resolved = false;
 		promise.failed = true;
-		delete promise.result;
 		promise.error = error;
+
+		delete promise.result;
 
 		if (promise.failCallback)
 		{
@@ -69,13 +67,19 @@ module.exports = function Promise()
 
 	Promise.all = (list) =>
 	{
+		if (!Array.isArray(list))
+		{
+			throw 'Not an array';
+		}
+
+		let results = new Array(list.length);
 		let all = {
 			count: list.length,
 			done: (callback) =>
 			{
 				if (all.count === 0)
 				{
-					callback();
+					callback(results);
 					return;
 				}
 
@@ -83,22 +87,30 @@ module.exports = function Promise()
 			}
 		};
 
-		list.forEach((promise) => {
+		list.forEach((promise, index) =>
+		{
 			if (promise.resolved || promise.failed)
 			{
 				--all.count;
+
+				results[index] = promise.result;
+
 				if (all.count === 0)
 				{
-					all.callback();
+					all.callback(results);
 				}
 				return;
 			}
+
 			promise.allCallback = () =>
 			{
 				--all.count;
+				
+				results[index] = promise.result;
+
 				if (all.count === 0)
 				{
-					all.callback();
+					all.callback(results);
 				}
 			};
 		});

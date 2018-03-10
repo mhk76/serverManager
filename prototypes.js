@@ -1,17 +1,5 @@
 'use strict';
 
-Number.prototype.leftPad = function(length, padChar)
-{
-	let output = this.toString();
-
-	if (output.length < length)
-	{
-		return (padChar || '0').toString().substr(0, 1).repeat(length - output.length) + output;
-	}
-
-	return output.slice(-length);
-};
-
 String.prototype.appendTrail = function(trail)
 {
 	if (typeof trail !== 'string' || trail.length === 0)
@@ -111,7 +99,7 @@ Array.prototype.equals = function(array, deepComparison, softComparison)
 }
 Object.defineProperty(Array.prototype, "equals", { enumerable: false });
 
-Array.prototype.intersect = function(array, softComparison)
+Array.prototype.intersects = function(array, softComparison)
 {
 	if (!Array.isArray(array))
 	{

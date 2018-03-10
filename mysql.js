@@ -24,7 +24,7 @@ module.exports = (config) =>
 	{
 		_module.starting.reject(exception);
 	}
-	
+
 	_module.query = (sql, parameters) =>
 		{
 			let promise = new $Promise();
@@ -65,7 +65,7 @@ module.exports = (config) =>
 					'SELECT column_name FROM information_schema.columns WHERE table_name = @name;',
 					{ 'name': name }
 				)
-				.success((data) =>
+				.then((data) =>
 				{
 					if (data.result.length === 0)
 					{
@@ -94,11 +94,11 @@ module.exports = (config) =>
 						sql.push(');');
 
 						_module.query(sql.join(''))
-							.success((data) =>
+							.then((data) =>
 							{
 								promise.resolve();
 							})
-							.fail((err) =>
+							.catch((err) =>
 							{
 								promise.reject(err);
 							});
@@ -120,7 +120,7 @@ module.exports = (config) =>
 
 					promise.resolve();
 				})
-				.fail((err) =>
+				.catch((err) =>
 				{
 					promise.reject(err);
 				});

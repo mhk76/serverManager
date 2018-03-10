@@ -190,7 +190,7 @@ module.exports = (serverManager) =>
 					{
 						let promise = new serverManager.Promise();
 
-						promise.success((data) =>
+						promise.then((data) =>
 						{
 							responseData[action.requestId] = data;
 						});

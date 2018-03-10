@@ -64,7 +64,7 @@ module.exports = (config) =>
 	}
 
 	let _starting = new $Promise()
-		.success((state) =>
+		.then((state) =>
 		{
 			_startState |= state;
 
@@ -77,7 +77,7 @@ module.exports = (config) =>
 				_serverManager.webServer = new require('./webServer.js')(_serverManager);
 
 				_serverManager.webServer.loading
-					.success(() =>
+					.then(() =>
 					{
 						if (_serverManager.config.web.webSockets)
 						{
@@ -161,7 +161,7 @@ module.exports = (config) =>
 	{
 		_serverManager.mysql = require('./mysql.js')(_serverManager.config.mysql);
 		_serverManager.mysql.starting
-			.success(() =>
+			.then(() =>
 			{
 				logInfo('MySql connected');
 
@@ -188,12 +188,12 @@ module.exports = (config) =>
 							},
 							['log_id']
 						)
-						.success(() =>
+						.then(() =>
 						{
 							logInfo('MySql log database initialised');
 							_starting.resolve($stateLog);
 						})
-						.fail((error) =>
+						.catch((error) =>
 						{
 							logExit('MySql log database structure verification failed', error);
 						});
@@ -203,7 +203,7 @@ module.exports = (config) =>
 					initCache();
 				}
 			})
-			.fail((error) =>
+			.catch((error) =>
 			{
 				setTimeout(() =>
 				{
@@ -305,9 +305,16 @@ module.exports = (config) =>
 			return _cache[section].data; 
 		}
 
+		if (Array.isArray(data))
+		{
+			_cache[section].data = data;
+			_cache[section].altered = true;
+			return;
+		}
+
 		for (let key in data)
 		{
-			if (data[key] === null)
+			if (data[key] == null)
 			{
 				delete _cache[section].data[key];
 			}
@@ -383,7 +390,7 @@ module.exports = (config) =>
 			let date = new Date();
 
 			$fs.appendFile(
-				[_serverManager.config.log.path, date.getFullYear(), '-', (date.getMonth() + 1).leftPad(2, '0'), '-', date.getDate().leftPad(2, '0'), '.log'].join(''),
+				[_serverManager.config.log.path, date.getFullYear(), '-', padZeros(date.getMonth() + 1), '-', padZeros(date.getDate()), '.log'].join(''),
 				JSON.stringify(data) + '\n',
 				{ encoding: 'utf8' },
 				() => {}
@@ -463,7 +470,7 @@ module.exports = (config) =>
 			logExit('Invalid web port', _serverManager.config.web.protocol);
 		}
 
-		if (typeof _serverManager.config.web.messageSizeLimit !== 'number')
+		if (typeof _serverManager.config.web.messageSizeLimit !== 'number' || _serverManager.config.web.messageSizeLimit < 1000)
 		{
 			logExit('Invalid message size limit', _serverManager.config.web.messageSizeLimit);
 		}
@@ -478,6 +485,19 @@ module.exports = (config) =>
 			logExit('Invalid cache interval', _serverManager.config.cache.interval);
 		}
 
+		if (_serverManager.config.cache.format === 'file')
+		{
+			$fs.appendFileAsync(
+				_serverManager.config.cache.file,
+				'',
+				{ encoding: 'utf8' },
+				(error) =>
+				{
+					logExit('Unabled to write into cache file', error);
+				}
+			);
+		}
+		
 		if (!['off', 'stdout', 'file', 'mysql', 'mongoose'].includes(_serverManager.config.log.format))
 		{
 			logExit('Invalid log format', _serverManager.config.log.format);
@@ -524,12 +544,12 @@ module.exports = (config) =>
 					},
 					['section']
 				)
-				.success(() =>
+				.then(() =>
 				{
 					_serverManager.mysql.query(
 							'SELECT section, data FROM cache'
 						)
-						.success((data) =>
+						.then((data) =>
 						{
 							for (let r = 0; r < data.result.length; r++)
 							{
@@ -543,12 +563,12 @@ module.exports = (config) =>
 
 							_starting.resolve($stateCache);
 						})
-						.fail((error) =>
+						.catch((error) =>
 						{
 							logExit('Unabled to read MySql cache', error);
 						});
 				})
-				.fail((error) =>
+				.catch((error) =>
 				{
 					logExit('Failed to initialize MySql cache', error);
 				});
@@ -653,7 +673,7 @@ module.exports = (config) =>
 			sql.push(list.join(', '));
 
 			_serverManager.mysql.query(sql.join(''))
-				.fail((error) =>
+				.catch((error) =>
 				{
 					logError('Failed to save MySql cache', error);
 				});
@@ -679,6 +699,18 @@ module.exports = (config) =>
 			_altered = false;
 		}
 	} // function saveCacheToFile()
+};
+
+function padZeros(number)
+{
+	let output = number.toString();
+
+	if (output.length < 2)
+	{
+		return '0'.repeat(2 - output.length) + output;
+	}
+
+	return output.slice(-2);
 };
 
 function logInfo(message)
