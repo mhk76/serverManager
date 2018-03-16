@@ -1,32 +1,33 @@
 {
-  "name": "servermanager",
-  "version": "1.2.1",
-  "description": "",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/mhk76/servermanager/"
-  },
-  "main": "serverManager.js",
-  "dependencies": {
-    "sqlstring": "latest",
-    "uuid": "latest",
-    "ws": "latest"
-  },
-  "author": "Mikko Karhunen <mikko.karhunen@iki.fi>",
-  "license": "MIT",
-  "private": false,
-  "scripts": {
-    "test": "mocha test/test*.js"
-  },
-  "engines": {
-    "node": ">=8.0.0"
-  },
-  "keywords": [
-    "web",
-    "websocket"
-  ],
-  "devDependencies": {
-    "chai": "^4.1.2",
-    "mocha": "^5.0.1"
-  }
+	"name": "servermanager",
+	"version": "1.2.2",
+	"description": "Web application server module over HTTP POST and WebSocket",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mhk76/servermanager/"
+	},
+	"main": "serverManager.js",
+	"dependencies": {
+		"sqlstring": "^2.3.1",
+		"uuid": "^3.2.1",
+		"ws": "^5.0.0"
+	},
+	"author": "Mikko Karhunen <mikko.karhunen@iki.fi>",
+	"license": "MIT",
+	"private": false,
+	"scripts": {
+		"test": "mocha test/test*.js"
+	},
+	"engines": {
+		"node": ">=8.0.0"
+	},
+	"keywords": [
+		"web",
+		"websocket",
+		"application server"
+	],
+	"devDependencies": {
+		"chai": "^4.1.2",
+		"mocha": "^5.0.4"
+	}
 }

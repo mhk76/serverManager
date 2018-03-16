@@ -51,7 +51,7 @@ module.exports = (config) =>
 
 	_serverManager.Promise = $Promise;
 
-	let _app = null;
+	let _app;
 
 	if (_serverManager.config.server.file)
 	{
@@ -429,16 +429,34 @@ module.exports = (config) =>
 
 	_serverManager.setListener = (callback) =>
 	{
-		_serverManager.webServer.setListener(callback);
+		if (!_serverManager.config.web.disablePost)
+		{
+			_serverManager.webServer.setListener(callback);
+		}
 		if (_serverManager.webSocket)
 		{
 			_serverManager.webSocket.setListener(callback);
 		}
 	};
 
+	_serverManager.addUserGroup = (userId, groupId) =>
+	{
+		if (!_serverManager.config.web.disablePost)
+		{
+			_serverManager.webServer.addUserGroup(userId, groupId);
+		}
+		if (_serverManager.webSocket)
+		{
+			_serverManager.webSocket.addUserGroup(userId, groupId);
+		}
+	};
+
 	_serverManager.broadcast = (groupId, dataType, data, lifeSpan) =>
 	{
-		_serverManager.webServer.broadcast(groupId, dataType, data, lifeSpan);
+		if (!_serverManager.config.web.disablePost)
+		{
+			_serverManager.webServer.broadcast(groupId, dataType, data, lifeSpan);
+		}
 		if (_serverManager.webSocket)
 		{
 			_serverManager.webSocket.broadcast(groupId, dataType, data);

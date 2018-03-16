@@ -14,7 +14,7 @@ describe('ServerManager', () =>
 		return new Promise((resolve) =>
 		{
 			require('../serverManager.js')({
-				"app": {
+				"server": {
 					"file": "../../../test/server.js",
 				},
 				"web": {
@@ -51,8 +51,9 @@ describe('ServerManager', () =>
 		);
 
 		let files = [
-			'serviceManagerAngularTools.js',
-			'serviceManagerDialog.css'
+			'serverManagerTools.angular.js',
+			'serverManagerTools.jquery.js',
+			'serverManagerDialog.css'
 		];
 		
 		files.forEach((filename) =>

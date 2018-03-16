@@ -44,6 +44,7 @@ module.exports = function Promise()
 		if (promise.allCallback)
 		{
 			promise.allCallback();
+			delete promise.allCallback;
 		}
 	};
 
@@ -62,6 +63,7 @@ module.exports = function Promise()
 		if (promise.allCallback)
 		{
 			promise.allCallback();
+			delete promise.allCallback;
 		}
 	};
 

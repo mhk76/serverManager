@@ -118,14 +118,16 @@ module.exports = (serverManager) =>
 						}
 	
 						_webSockets[webSocket.userId] = {
-							webSocket: webSocket
+							webSocket: webSocket,
+							groups: []
 						};
 					}
 					else
 					{
 						webSocket.userId = appRequest.userId = webSocket.userId || $Uuidv1();
 						_webSockets[webSocket.userId] = {
-							webSocket: webSocket
+							webSocket: webSocket,
+							groups: []
 						};
 					}
 
@@ -136,10 +138,7 @@ module.exports = (serverManager) =>
 				})
 				.on('close', () =>
 				{
-					if (webSocket.userId)
-					{
-						_webSockets[webSocket.userId] = null;
-					}
+					delete _webSockets[webSocket.userId];
 				});
 		});
 
@@ -150,9 +149,9 @@ module.exports = (serverManager) =>
 		{
 			_listener = callback;
 		},
-		setUserGroup: (userId, groupId) =>
+		addUserGroup: (userId, groupId) =>
 		{
-			_webSockets[userId].group = groupId;
+			_webSockets[userId].groups.push(groupId);
 		},
 		broadcast: (groupId, dataType, data) =>
 		{
@@ -165,7 +164,7 @@ module.exports = (serverManager) =>
 
 			for (let userId in _webSockets)
 			{
-				if (groupId == null || _webSockets[userId].groupId === groupId)
+				if (groupId == null || _webSockets[userId].groups.includes(groupId))
 				{
 					_webSockets[userId].webSocket.send(JSON.stringify({
 						requestId: dataType,

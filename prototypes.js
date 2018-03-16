@@ -98,19 +98,3 @@ Array.prototype.equals = function(array, deepComparison, softComparison)
 		});
 }
 Object.defineProperty(Array.prototype, "equals", { enumerable: false });
-
-Array.prototype.intersects = function(array, softComparison)
-{
-	if (!Array.isArray(array))
-	{
-		return false;
-	}
-	return this.some((thisValue) =>
-		{
-			return array.some((arrayValue) =>
-			{
-				return Object.equals(thisValue, arrayValue, softComparison);
-			});
-		});
-}
-Object.defineProperty(Array.prototype, "intersect", { enumerable: false });

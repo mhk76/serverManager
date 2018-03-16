@@ -55,18 +55,25 @@ module.exports = (serverManager) =>
 		_listener = callback;
 	};
 
-	_server.setUserGroup = (userId, groupId) =>
+	_server.addUserGroup = (userId, groupId) =>
 	{
-		_userGroups[userId] = groupId;
+		if (_userGroups[userId])
+		{
+			_userGroups[userId].push(groupId);
+		}
+		else
+		{
+			_userGroups[userId] = [groupId];
+		}
 	};
 
 	_server.broadcast = (groupId, dataType, data, lifeSpan) =>
 	{
 		_broadcasts.push({
 			userIds: groupId && Object.keys(_userGroups).filter((userId) =>
-			{
-				return _userGroups[userId] === groupId;
-			}),
+				{
+					return _userGroups[userId].includes(groupId);
+				}),
 			requestId: dataType,
 			data: {
 				status: 'ok',
