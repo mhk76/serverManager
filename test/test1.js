@@ -82,7 +82,7 @@ describe('ServerManager', () =>
 				.on('end', () =>
 				{
 					$assert(
-						$fs.readFileSync(filename, 'utf8'),
+						$fs.readFileSync(filename.replace('.js', '.min.js'), 'utf8'),
 						responseData,
 						filename
 					);

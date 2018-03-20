@@ -100,9 +100,17 @@ module.exports = (serverManager) =>
 
 					if (request.url === '/serverManagerTools.angular.js')
 					{
+						file = _root + 'serverManagerTools.angular.min.js';
+					}
+					if (request.url === '/serverManagerTools.angular.full.js')
+					{
 						file = _root + 'serverManagerTools.angular.js';
 					}
 					else if (request.url === '/serverManagerTools.jquery.js')
+					{
+						file = _root + 'serverManagerTools.jquery.min.js';
+					}
+					else if (request.url === '/serverManagerTools.jquery.full.js')
 					{
 						file = _root + 'serverManagerTools.jquery.js';
 					}
