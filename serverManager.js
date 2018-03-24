@@ -469,7 +469,7 @@ module.exports = (config) =>
 				(config.server.watchModules == true)
 				|| (process.argv.some((arg) => arg === '-watch' ))
 			)
-		consig.server.watchDelay = parseInt(consig.server.watchDelay) || 250
+		config.server.watchDelay = parseInt(config.server.watchDelay || 250)
 	
 		if (config.server.file && !$fs.existsSync(config.server.file))
 		{
