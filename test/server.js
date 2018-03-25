@@ -39,11 +39,21 @@ exports.start = (serverManager) =>
 					300
 				)
 				break
-			case 'save':
-				serverManager.cache(request.userId, request.parameters)
+			case 'initCache':
+				serverManager.initCache(request.parameters.section, request.parameters.data)
+				request.response()
 				break
-			case 'load':
-				request.response(serverManager.cache(request.userId))
+			case 'writeCache':
+try {
+			serverManager.cache(request.parameters.section, request.parameters.data)
+}catch(e)
+{
+	console.log(e)
+}
+				request.response()
+				break
+			case 'readCache':
+				request.response(serverManager.cache(request.parameters.section))
 		}
 	})
 }

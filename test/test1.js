@@ -132,8 +132,20 @@ describe('ServerManager', () =>
 
 		webSocket.on('open', () =>
 		{
-			webSocket.send(JSON.stringify({ requestId: 'ws0', userId: 'uid', action: 'zero' }))
-			webSocket.send(JSON.stringify({ requestId: 'ws1', userId: 'uid', action: 'two' }))
+			try
+			{
+				webSocket.send(JSON.stringify({ requestId: 'ws0', userId: 'uid', action: 'zero' }))
+				webSocket.send(JSON.stringify({ requestId: 'ws1', userId: 'uid', action: 'two' }))
+				webSocket.send(JSON.stringify({ requestId: 'ws2', userId: 'uid', action: 'initCache', parameters: { section: 'one', data: 'initial' } }))
+				webSocket.send(JSON.stringify({ requestId: 'ws3', userId: 'uid', action: 'writeCache', parameters: { section: 'one', data: 'overwritten' } }))
+				webSocket.send(JSON.stringify({ requestId: 'ws4', userId: 'uid', action: 'readCache', parameters: { section: 'one' } }))
+				webSocket.send(JSON.stringify({ requestId: 'ws5', userId: 'uid', action: 'writeCache', parameters: { section: 'two', data: 'information' } }))
+				webSocket.send(JSON.stringify({ requestId: 'ws6', userId: 'uid', action: 'readCache', parameters: { section: 'two' } }))
+			}
+			catch(error)
+			{
+				$assert.fail({}, null, error.message)
+			}
 		})
 
 		function responseHandler(response)
@@ -184,6 +196,33 @@ describe('ServerManager', () =>
 				)
 				++_doneCount
 			}
+			else if (['ws2', 'ws3', 'ws5'].includes(json.requestId))
+			{
+				$assert(
+					json,
+					{ requestId: json.requestId, userId: 'uid', status: 'ok', data: {} },
+					'WebSocket response #3/4/6'
+				)
+				++_doneCount
+			}
+			else if (json.requestId === 'ws4')
+			{
+				$assert(
+					json,
+					{ requestId: 'ws4', userId: 'uid', status: 'ok', data: 'overwritten' },
+					'WebSocket response #4'
+				)
+				++_doneCount
+			}
+			else if (json.requestId === 'ws6')
+			{
+				$assert(
+					json,
+					{ requestId: 'ws6', userId: 'uid', status: 'ok', data: 'information' },
+					'WebSocket response #4'
+				)
+				++_doneCount
+			}
 			else if (json.requestId === 'all')
 			{
 				$assert(
@@ -203,7 +242,7 @@ describe('ServerManager', () =>
 				++_doneCount
 			}
 
-			if (_doneCount === 4)
+			if (_doneCount === 8)
 			{
 				done()
 			}

@@ -20,7 +20,7 @@ module.exports = (config) =>
 	let _serverManager = this
 	let _cache = {
 		altered: false,
-		data: {}
+		sections: {}
 	}
 	let _startState = $stateUnloaded
 	let _mongooseModels
@@ -292,13 +292,16 @@ module.exports = (config) =>
 
 		if (data === undefined)
 		{
-			return _cache.sections[section].data 
+			return _cache.sections[section] && _cache.sections[section].data 
 		}
 
-		if (Array.isArray(data))
+		if (!_cache.sections[section] || Array.isArray(data) || ['string', 'number'].includes(typeof data) || data instanceof Date)
 		{
-			_cache.sections[section].data = data
-			_cache.sections[section].altered = true
+			_cache.sections[section] = {
+				altered: true,
+				data: data
+			}
+			_cache.altered = true
 			return
 		}
 
@@ -315,6 +318,7 @@ module.exports = (config) =>
 		}
 
 		_cache.sections[section].altered = true
+		_cache.altered = true
 	}
 
 	_serverManager.writeLog = (protocol, status, request, startTime, err) =>
@@ -632,7 +636,7 @@ module.exports = (config) =>
 			{
 				_cache = {
 					altered: false,
-					data: {}
+					sections: {}
 				}
 
 				let data = JSON.parse($fs.readFileSync(_serverManager.config.cache.file, 'utf8'))
@@ -654,7 +658,7 @@ module.exports = (config) =>
 			{
 				_cache = {
 					altered: false,
-					data: {}
+					sections: {}
 				}
 				_initializing.resolve($stateCache)
 				logInfo('Using file cache')
