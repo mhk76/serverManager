@@ -83,10 +83,12 @@ module.exports = (config) =>
 						{
 							sql.push(
 								', PRIMARY KEY (',
-								primaryKey.map((item) =>
-								{
-									return '`' + item + '`'
-								}),
+								Array.isArray(primaryKey)
+								? primaryKey.map((item) =>
+									{
+										return '`' + item + '`'
+									}).join(',')
+								: primaryKey,
 								')'
 							)
 						}
