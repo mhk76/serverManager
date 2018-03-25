@@ -1,13 +1,13 @@
-'use strict';
+'use strict'
 
-const $assert = require('chai').assert;
-const $http = require('http');
-const $fs = require('fs');
-const $ws = require('ws');
+const $assert = require('chai').assert
+const $http = require('http')
+const $fs = require('fs')
+const $ws = require('ws')
 
 describe('ServerManager', () =>
 {
-	let _serverManager;
+	let _serverManager
 
 	before(() =>
 	{
@@ -32,29 +32,29 @@ describe('ServerManager', () =>
 				}
 			}).then((serverManager) =>
 			{
-				_serverManager = serverManager;
-				resolve();
-			});
-		});
-	});
+				_serverManager = serverManager
+				resolve()
+			})
+		})
+	})
 
 	it('GET', (done) =>
 	{
-		let doneCount = 0;
+		let doneCount = 0
 
 		$http.get(
 			_serverManager.config.web.protocol + '://localhost:' + _serverManager.config.web.port + '/client.html',
 			(response) =>
 			{
-				responseHandler(response, './test/client.html');
+				responseHandler(response, './test/client.html')
 			}
-		);
+		)
 
 		let files = [
 			'serverManagerTools.angular.js',
 			'serverManagerTools.jquery.js',
 			'serverManagerDialog.css'
-		];
+		]
 		
 		files.forEach((filename) =>
 		{
@@ -62,22 +62,22 @@ describe('ServerManager', () =>
 				_serverManager.config.web.protocol + '://localhost:' + _serverManager.config.web.port + '/' + filename,
 				(response) =>
 				{
-					responseHandler(response, filename);
+					responseHandler(response, filename)
 				}
-			);
-		});
+			)
+		})
 
 		function responseHandler(response, filename)
 		{
-			$assert(response.statusCode, 200, 'Status 200');
+			$assert(response.statusCode, 200, 'Status 200')
 
-			let responseData = [];
+			let responseData = []
 
-			response.setEncoding('utf8');
+			response.setEncoding('utf8')
 			response
 				.on('data', (data) =>
 				{
-					responseData.push(data);
+					responseData.push(data)
 				})
 				.on('end', () =>
 				{
@@ -85,16 +85,16 @@ describe('ServerManager', () =>
 						$fs.readFileSync(filename.replace('.js', '.min.js'), 'utf8'),
 						responseData,
 						filename
-					);
-					++doneCount;
+					)
+					++doneCount
 
 					if (doneCount === (1 + files.length))
 					{
-						done();
+						done()
 					}
-				});
+				})
 		}
-	});
+	})
 
 	it('POST and WebSocket', (done) =>
 	{
@@ -104,7 +104,7 @@ describe('ServerManager', () =>
 				{ requestId: 'http0', action: 'one' },
 				{ requestId: 'http1', action: 'three' }
 			]
-		});
+		})
 
 		let request = $http.request(
 			{
@@ -118,48 +118,48 @@ describe('ServerManager', () =>
 				}
 			},
 			responseHandler
-		);
+		)
 
-		request.write(postData);
-		request.end();
+		request.write(postData)
+		request.end()
 
-		let webSocket = new $ws('ws://localhost:8765/');
+		let webSocket = new $ws('ws://localhost:8765/')
 
 		webSocket.on('message', (messageData) =>
 		{
-			resultsHandler(messageData);
-		});
+			resultsHandler(messageData)
+		})
 
 		webSocket.on('open', () =>
 		{
-			webSocket.send(JSON.stringify({ requestId: 'ws0', userId: 'uid', action: 'zero' }));
-			webSocket.send(JSON.stringify({ requestId: 'ws1', userId: 'uid', action: 'two' }));
-		});
+			webSocket.send(JSON.stringify({ requestId: 'ws0', userId: 'uid', action: 'zero' }))
+			webSocket.send(JSON.stringify({ requestId: 'ws1', userId: 'uid', action: 'two' }))
+		})
 
 		function responseHandler(response)
 		{
-			let responseData = [];
+			let responseData = []
 
-			response.setEncoding('utf8');
+			response.setEncoding('utf8')
 			response
 				.on('data', (data) =>
 				{
-					responseData.push(data);
+					responseData.push(data)
 				})
 				.on('end', () =>
 				{
-					resultsHandler(responseData.join(''));
-				});
+					resultsHandler(responseData.join(''))
+				})
 		}
 
-		let _doneCount = 0;
+		let _doneCount = 0
 		function resultsHandler(data)
 		{
-			let json;
+			let json
 
 			try
 			{
-				json = JSON.parse(data);
+				json = JSON.parse(data)
 			}
 			catch (error)
 			{
@@ -172,8 +172,8 @@ describe('ServerManager', () =>
 					json,
 					{ requestId: 'ws0', userId: 'uid', status: 'ok', data: 'zero', buffer: { buffer: { parameters: 'values', response: 'data', isPermanent: false } } },
 					'WebSocket response #1'
-				);
-				++_doneCount;
+				)
+				++_doneCount
 			}
 			else if (json.requestId === 'ws1')
 			{
@@ -181,8 +181,8 @@ describe('ServerManager', () =>
 					json,
 					{ requestId: 'ws1', userId: 'uid', status: 'ok', data: 'two' },
 					'WebSocket response #2'
-				);
-				++_doneCount;
+				)
+				++_doneCount
 			}
 			else if (json.requestId === 'all')
 			{
@@ -190,8 +190,8 @@ describe('ServerManager', () =>
 					json,
 					{ requestId: 'all', userId: 'uid', status: 'ok',  data: 'broadcast' },
 					'WebSocket broadcast'
-				);
-				++_doneCount;
+				)
+				++_doneCount
 			}
 			else
 			{
@@ -199,21 +199,21 @@ describe('ServerManager', () =>
 					json.responses.http0,
 					{ userId: 'uid', responses: { http0: { status: 'ok', data: 'one' }, http1: { status: 'ok', data: 'three' }, all: { status: 'ok', data: 'broadcast' } }, buffer: { buffer: { parameters: 'values', response: 'data', isPermanent: false } } },
 					'WebSocket broadcast'
-				);
-				++_doneCount;
+				)
+				++_doneCount
 			}
 
 			if (_doneCount === 4)
 			{
-				done();
+				done()
 			}
 		} // resultsHandler()
 
-	}); // it()
+	}) // it()
 
 	after(() =>
 	{
-		process.exit();
-	});
+		process.exit()
+	})
 
-}); // describe('ServerManager')
+}) // describe('ServerManager')

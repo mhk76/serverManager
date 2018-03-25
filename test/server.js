@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 exports.start = (serverManager) =>
 {
@@ -7,43 +7,43 @@ exports.start = (serverManager) =>
 		switch (request.action)
 		{
 			case 'zero':
-				request.buffer('buffer', 'values', 'data');
-				request.response('zero');
+				request.buffer('buffer', 'values', 'data')
+				request.response('zero')
 				serverManager.broadcast(null, 'all', 'broadcast')
-				break;
+				break
 			case 'one':
-				request.buffer('buffer', 'values', 'data');
+				request.buffer('buffer', 'values', 'data')
 				setTimeout(
 					() =>
 					{
-						request.response('one');
+						request.response('one')
 					},
 					100
-				);
-				break;
+				)
+				break
 			case 'two':
 				setTimeout(
 					() =>
 					{
-						request.response('two');
+						request.response('two')
 					},
 					200
-				);
-				break;
+				)
+				break
 			case 'three':
 				setTimeout(
 					() =>
 					{
-						request.response('three');
+						request.response('three')
 					},
 					300
-				);
-				break;
+				)
+				break
 			case 'save':
-				serverManager.cache(request.userId, request.parameters);
-				break;
+				serverManager.cache(request.userId, request.parameters)
+				break
 			case 'load':
-				request.response(serverManager.cache(request.userId));
+				request.response(serverManager.cache(request.userId))
 		}
-	});
-};
+	})
+}
