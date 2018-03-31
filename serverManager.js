@@ -77,7 +77,7 @@ module.exports = (config) =>
 						}
 						catch (error)
 						{
-							logError('Error while starting the application', error)
+							logExit('Error while starting the application', error)
 						}
 					})
 				}
@@ -283,7 +283,7 @@ module.exports = (config) =>
 		}
 	}
 
-	_serverManager.cache = (section, data)	=>
+	_serverManager.cache = (section, data, deleteNull = false)	=>
 	{
 		if (!section)
 		{
@@ -307,7 +307,7 @@ module.exports = (config) =>
 
 		for (let key in data)
 		{
-			if (data[key] == null)
+			if (deleteNull && data[key] == null)
 			{
 				delete _cache.sections[section].data[key]
 			}
@@ -726,7 +726,7 @@ module.exports = (config) =>
 
 			for (let section in _cache.sections)
 			{
-				_cache.altered = altered || _cache.sections[section].altered
+				_cache.altered = _cache.altered || _cache.sections[section].altered
 			}
 }
 	} // function saveCacheToMongoDB()
@@ -765,7 +765,7 @@ module.exports = (config) =>
 
 					for (let section in _cache.sections)
 					{
-						_cache.altered = altered || _cache.sections[section].altered
+						_cache.altered = _cache.altered || _cache.sections[section].altered
 					}
 				})
 				.catch((error) =>
@@ -801,7 +801,7 @@ module.exports = (config) =>
 
 			for (let section in _cache.sections)
 			{
-				_cache.altered = altered || _cache.sections[section].altered
+				_cache.altered = _cache.altered || _cache.sections[section].altered
 			}
 }
 	} // function saveCacheToFile()
@@ -826,10 +826,24 @@ function logInfo(message)
 
 function logError(message, error)
 {
-	console.error('ServerManager - ' + message)
-	if (error)
+	if (error instanceof Error)
 	{
-		console.error('>' + error)
+		console.error(
+			'ServerManager - ' + message + ':\n'
+			+ '> ' + error.message + '\n'
+			+ '> ' + error.stack.split('at ')[1]
+		)
+	}
+	else if (error)
+	{
+		console.error(
+			'ServerManager - ' + message + ':\n'
+			+ '> ' + error
+		)
+	}
+	else
+	{
+		console.error('ServerManager - ' + message)
 	}
 }
 

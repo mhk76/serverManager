@@ -159,7 +159,7 @@ module.exports = (serverManager) =>
 			let appRequest = {
 				action: 'broadcast',
 				method: groupId,
-				outputDataLength: JSON.stringify(data).length
+				outputDataLength: JSON.stringify(data || '').length
 			}
 
 			for (let userId in _webSockets)
