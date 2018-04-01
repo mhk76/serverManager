@@ -25,6 +25,7 @@ module.exports = (config) =>
 	let _startState = $stateUnloaded
 	let _mongooseModels
 	let _serverManagerStart = new $Promise()
+	let _watching = []
 	let _app
 
 	_serverManager.config = verifyConfig(config)
@@ -73,7 +74,7 @@ module.exports = (config) =>
 					setTimeout(() => {
 						try
 						{
-							_app.start(_serverManager)
+							startApp();
 						}
 						catch (error)
 						{
@@ -233,40 +234,6 @@ module.exports = (config) =>
 		logInfo('No cache backup')
 	}
 
-	if (_serverManager.config.server.watchModules)
-	{
-		let restartTimer = null
-		let modules = [_serverManager.config.server.file]
-		let filenames = []
-
-		if (_app.subModules)
-		{
-			modules = modules.concat($root + _app.subModules)
-		}
-
-		modules.forEach((item) =>
-		{
-			filenames.push($path.parse(item).base)
-
-			$fs.watch(item, { persistent: true }, () =>
-			{
-				if (restartTimer !== null)
-				{
-					clearTimeout(restartTimer)
-				}
-				restartTimer = setTimeout(() =>
-					{
-						_serverManager.restartApp()
-						restartTimer = null
-					},
-					_serverManager.config.server.watchDelay
-				)
-			})
-		})
-
-		logInfo('Watching modules: ' + filenames.join(', '))
-	}
-
 	_serverManager.initCache = (section, defaultData) =>
 	{
 		if (!section)
@@ -295,7 +262,7 @@ module.exports = (config) =>
 			return _cache.sections[section] && _cache.sections[section].data 
 		}
 
-		if (!_cache.sections[section] || Array.isArray(data) || ['string', 'number'].includes(typeof data) || data instanceof Date)
+		if (!_cache.sections[section] || Array.isArray(data) || ['string', 'number', 'boolean'].includes(typeof data) || data instanceof Date)
 		{
 			_cache.sections[section] = {
 				altered: true,
@@ -416,9 +383,10 @@ module.exports = (config) =>
 		delete require.cache[require.resolve(_serverManager.config.server.file)]
 
 		_app = require(_serverManager.config.server.file)
-		_app.start(_serverManager)
 
-		logInfo('App restarted')
+		startApp()
+
+		logInfo('The application has restarted')
 	}
 
 	_serverManager.setListener = (callback) =>
@@ -460,13 +428,71 @@ module.exports = (config) =>
 	return _serverManagerStart
 	
 
+	function startApp()
+	{
+		_app.start(_serverManager)
+
+		if (_serverManager.config.server.watchModules)
+		{
+			let restartTimer = null
+			let modules = [_serverManager.config.server.file]
+	
+			if (_app.subModules)
+			{
+				modules = modules.concat(_app.subModules.map((module) =>
+				{
+					return $path.normalize(_serverManager.config.server.root + module)
+				}))
+			}
+
+			modules.forEach((module) =>
+			{
+				if (_watching.includes(module))
+				{
+					return
+				}
+
+				_watching.push(module)
+
+				$fs.watch(module, { persistent: true }, () =>
+				{
+					if (restartTimer !== null)
+					{
+						clearTimeout(restartTimer)
+					}
+					restartTimer = setTimeout(() =>
+						{
+							_serverManager.restartApp()
+							restartTimer = null
+						},
+						_serverManager.config.server.watchDelay
+					)
+				})
+			})
+	
+			logInfo('Watching modules: ' + _watching.map((f) => f.replace(_serverManager.config.server.root, '')).join(', '))
+		}
+	}
+
 	function verifyConfig(config)
 	{
 		config = config || {}
 
 		// server
 		config.server = config.server || {}
-		config.server.file = (config.server.file ? $root + config.server.file : null)
+		config.server.root = config.server.root ? $path.normalize($root + config.server.root).appendTrail('/') : null
+		if (config.server.file)
+		{
+			if (config.server.root)
+			{
+				config.server.file = $path.normalize(config.server.root + config.server.file)
+			}
+			else
+			{
+				config.server.file = $path.normalize($root + config.server.file)
+				config.server.root = $path.dirname(config.server.file).appendTrail('/')
+			}
+		}
 		config.server.watchModules =
 			(config.server.file !== null)
 			&& (
@@ -704,18 +730,20 @@ module.exports = (config) =>
 		{
 			for (let section in _cache.sections)
 			{
-				let entry = new _mongooseModels.Cache({
-					_id: _cache.sections[section]._id,
-					name: section,
-					data: _cache.sections[section].data
-				})
 				_cache.sections[section].altered = false
-				entry.isNew = !_cache.sections[section]._id
-				entry.save()
-					.then((data) =>
+
+				_mongooseModels.Cache.findOneAndUpdate(
 					{
-						_cache.sections[section]._id = data._id
-					})
+						name: section
+					},
+					{
+						name: section,
+						data: _cache.sections[section].data
+					},
+					{
+						upsert:true
+					}
+				)
 					.catch((error) =>
 					{
 						logError('Failed to save cache section "' + section + '" into MongoDB', error)

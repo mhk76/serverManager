@@ -6,6 +6,15 @@ const $fs = require('fs')
 const $Uuidv1 = require('uuid/v1')
 const $path = require('path')
 const $mime = require('./mime.json')
+const $files = new Map([
+	['/serverManagerTools.jquery.es6.js', 'serverManagerTools.jquery.es6.min.js'],
+	['/serverManagerTools.jquery.es6.full.js', 'serverManagerTools.jquery.es6.js'],
+	['/serverManagerTools.jquery.js', 'serverManagerTools.jquery.min.js'],
+	['/serverManagerTools.jquery.full.js', 'serverManagerTools.jquery.js'],
+	['/serverManagerTools.angular.js', 'serverManagerTools.angular.min.js'],
+	['/serverManagerTools.angular.full.js', 'serverManagerTools.angular.js'],
+	['/serverManagerDialog.css', 'serverManagerDialog.css']
+])
 
 module.exports = (serverManager) =>
 {
@@ -96,27 +105,11 @@ module.exports = (serverManager) =>
 				try
 				{
 					let url = $path.parse(request.url)
-					let file
+					let file = $files.get(request.url)
 
-					if (request.url === '/serverManagerTools.angular.js')
+					if (file)
 					{
-						file = _root + 'serverManagerTools.angular.min.js'
-					}
-					if (request.url === '/serverManagerTools.angular.full.js')
-					{
-						file = _root + 'serverManagerTools.angular.js'
-					}
-					else if (request.url === '/serverManagerTools.jquery.js')
-					{
-						file = _root + 'serverManagerTools.jquery.min.js'
-					}
-					else if (request.url === '/serverManagerTools.jquery.full.js')
-					{
-						file = _root + 'serverManagerTools.jquery.js'
-					}
-					else if (request.url === '/serverManagerDialog.css')
-					{
-						file = _root + 'serverManagerDialog.css'
+						file = _root + file
 					}
 					else
 					{

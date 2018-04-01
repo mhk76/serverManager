@@ -19,10 +19,9 @@ const serverManagerTools = (function()
 	let _tools = {
 		'dictionary': 
 		{
+			'loader': $.Deferred(),
 			'start': function()
 			{
-				let loader = $.Deferred();
-
 				$.get('dictionary.json')
 					.then(
 						function(data)
@@ -51,7 +50,7 @@ const serverManagerTools = (function()
 							}
 
 							_tools.dictionary.lang = _lang;
-							loader.resolve();
+							_tools.dictionary.loader.resolve();
 						},
 						function(response)
 						{
@@ -59,7 +58,7 @@ const serverManagerTools = (function()
 						}
 					);
 
-				return loader;
+				return _tools.dictionary.loader;
 			},
 			'lang': null,
 			'setLang': function(lang)
@@ -165,8 +164,8 @@ const serverManagerTools = (function()
 			{
 				if (!_dialog[dialogIndex])
 				{
-					_dialog[dialogIndex] = $('<div class="smDialog level' + (dialogIndex % 3) + ' ng-hide" data-ng-controller="DialogController"><span class="message"></span><p></p><div class="buttons"></div></div>');
-					_dialogMask[dialogIndex] = $('<div class="smDialogMask level' + (dialogIndex % 3) + ' ng-hide"></div>');
+					_dialog[dialogIndex] = $('<div class="smDialog level' + (dialogIndex % 3) + '"><span class="message"></span><p></p><div class="buttons"></div></div>');
+					_dialogMask[dialogIndex] = $('<div class="smDialogMask level' + (dialogIndex % 3) + '"></div>');
 					$(document.body)
 						.append(_dialog[dialogIndex])
 						.append(_dialogMask[dialogIndex]);
@@ -174,7 +173,7 @@ const serverManagerTools = (function()
 	
 				let messageText;
 	
-				if ($.isArray(message))
+				if (Array.isArray(message))
 				{
 					messageText = _tools.dictionary.get(message[0]);
 	
