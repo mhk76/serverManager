@@ -376,7 +376,7 @@ module.exports = (config) =>
 		{
 			_app.subModules.forEach((module) =>
 			{
-				delete require.cache[require.resolve(module)]
+				delete require.cache[require.resolve($path.normalize(_serverManager.config.server.root + module))]
 			})
 		}
 
@@ -756,7 +756,7 @@ module.exports = (config) =>
 			{
 				_cache.altered = _cache.altered || _cache.sections[section].altered
 			}
-}
+		}
 	} // function saveCacheToMongoDB()
 	
 	function saveCacheToMySql()
