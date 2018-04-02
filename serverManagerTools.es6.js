@@ -228,22 +228,19 @@ exports.serverManagerTools = (function()
 					sendData.parameters = parameters
 				}
 					
-				let promise = new Promise((resolve, reject) =>
+				return new Promise((resolve, reject) =>
 				{
-					_webSocketRequests[sendData.requestId] = { resolve, reject }
+					if (_webSocket.readyState === 1)
+					{
+						_webSocketRequests[sendData.requestId] = { resolve, reject }
+						_webSocket.send(JSON.stringify(sendData))
+					}
+					else
+					{
+						reject()
+					}
 				})
 				.catch((error) => { })
-
-				if (_webSocket.readyState === 1)
-				{
-					_webSocket.send(JSON.stringify(sendData))
-				}
-				else
-				{
-					promise.reject()
-				}
-
-				return promise
 			} // .fetch
 		}, // .webSocket
 
