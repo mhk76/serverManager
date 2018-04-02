@@ -25,8 +25,9 @@ Object.equals = function(object1, object2, softComparison)
 	}
 
 	let type1 = typeof object1
+	let type2 = typeof object2
 
-	if (type1 !== typeof object2 || type1 === 'string' || type1 === 'number' || type1 === 'boolean')
+	if (type1 !== type2 || ['string', 'number', 'boolean'].includes(type1) || ['string', 'number', 'boolean'].includes(type2))
 	{
 		return false
 	}

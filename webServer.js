@@ -7,13 +7,9 @@ const $Uuidv1 = require('uuid/v1')
 const $path = require('path')
 const $mime = require('./mime.json')
 const $files = new Map([
-	['/serverManagerTools.jquery.es6.js', 'serverManagerTools.jquery.es6.min.js'],
-	['/serverManagerTools.jquery.es6.full.js', 'serverManagerTools.jquery.es6.js'],
+	['/serverManagerTools.es6.js', 'serverManagerTools.es6.min.js'],
 	['/serverManagerTools.jquery.js', 'serverManagerTools.jquery.min.js'],
-	['/serverManagerTools.jquery.full.js', 'serverManagerTools.jquery.js'],
-	['/serverManagerTools.angular.js', 'serverManagerTools.angular.min.js'],
-	['/serverManagerTools.angular.full.js', 'serverManagerTools.angular.js'],
-	['/serverManagerDialog.css', 'serverManagerDialog.css']
+	['/serverManagerTools.angular.js', 'serverManagerTools.angular.min.js']
 ])
 
 module.exports = (serverManager) =>
