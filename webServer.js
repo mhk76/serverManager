@@ -99,7 +99,7 @@ module.exports = (serverManager) =>
 			{
 				try
 				{
-					const response = {
+					const getResponse = {
 						write: (data, headers, status = 200) =>
 						{
 							response.writeHead(status, headers)
@@ -115,12 +115,12 @@ module.exports = (serverManager) =>
 						}
 					}
 
-					if (serverManager.processGET(request, response))
+					if (serverManager.processGET(request, getResponse))
 					{
 						return
 					}
 
-					response.write = response.terminate = () => { throw new Error('WebServer - processGET() must return true for handled urls') }
+					getResponse.write = getResponse.terminate = () => { throw new Error('WebServer - processGET() must return true for handled urls') }
 
 					let url = $path.parse(request.url)
 					let file = $files.get(request.url)
