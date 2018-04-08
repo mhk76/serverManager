@@ -41,8 +41,7 @@ const serverManagerTools = (function()
 		'http':
 		{
 			'options': {
-				postDelay: 10,
-				permanentId: false
+				postDelay: 10
 			},
 			'fetch': function(action, parameters)
 			{
@@ -61,17 +60,17 @@ const serverManagerTools = (function()
 				}
 
 				let requestId = new Date().getTime() + Math.random();
-				let userId;
+				let sessionId;
 
 				_httpSendDeferreds[requestId] = deferred;
 				
-				if (localStorage && localStorage.getItem)
+				if (sessionStorage && sessionStorage.getItem)
 				{
-					userId = localStorage.userId;
+					sessionId = sessionStorage.sessionId;
 				}
 				else
 				{
-					userId = cookie.read('userId');
+					sessionId = cookie.read('sessionId');
 				}
 
 				let requestData = {
@@ -100,9 +99,9 @@ const serverManagerTools = (function()
 							actions: _httpSendBuffer
 						};
 
-						if (userId)
+						if (sessionId)
 						{
-							sendData.userId = userId;
+							sendData.sessionId = sessionId;
 						}
 
 						$.post({
@@ -113,20 +112,13 @@ const serverManagerTools = (function()
 						.then(
 							function(responseData)
 							{
-								if (responseData.userId)
+								if (sessionStorage && sessionStorage.setItem)
 								{
-									if (_tools.http.options.permanentId && localStorage && localStorage.setItem)
-									{
-										localStorage.setItem('userId', responseData.userId);
-									}
-									else if (sessionStorage && sessionStorage.setItem)
-									{
-										sessionStorage.setItem('userId', responseData.userId);
-									}
-									else
-									{
-										cookie.write('userId', responseData.userId, _tools.http.options.permanentId && (86400 * 365 * 10));
-									}
+									sessionStorage.setItem('sessionId', responseData.sessionId);
+								}
+								else
+								{
+									cookie.write('sessionId', responseData.sessionId);
 								}
 
 								_buffer = $.extend(_buffer, responseData.buffer);
@@ -196,23 +188,19 @@ const serverManagerTools = (function()
 					action: action
 				};
 
-				let userId;
+				let sessionId;
 
-				if (localStorage && localStorage.getItem)
+				if (sessionStorage && sessionStorage.getItem)
 				{
-					userId = localStorage.userId;
-				}
-				else if (sessionlStorage && sessionlStorage.getItem)
-				{
-					userId = sessionlStorage.userId;
+					sessionId = sessionStorage.sessionId;
 				}
 				else
 				{
-					userId = cookie.read('userId');
+					sessionId = cookie.read('sessionId');
 				}
-				if (userId)
+				if (sessionId)
 				{
-					sendData.userId = userId;
+					sendData.sessionId = sessionId;
 				}
 
 				if (parameters)
@@ -323,6 +311,15 @@ const serverManagerTools = (function()
 				{
 					cookie.delete(name);
 				}
+			},
+			'sessionId': function()
+			{
+				if (sessionStorage && sessionStorage.getItem)
+				{
+					return sessionStorage.sessionId;
+				}
+		
+				return cookie.read('sessionId');
 			}
 		}, // .server
 
@@ -364,20 +361,13 @@ const serverManagerTools = (function()
 					_buffer = $.extend(_buffer, responseData.buffer);
 				}
 
-				if (responseData.userId)
+				if (sessionStorage && sessionStorage.setItem)
 				{
-					if (_tools.webSocket.options.permanentId && localStorage && localStorage.setItem)
-					{
-						localStorage.setItem('userId', responseData.userId);
-					}
-					else if (sessionStorage && sessionStorage.setItem)
-					{
-						sessionStorage.setItem('userId', responseData.userId);
-					}
-					else
-					{
-						cookie.write('userId', responseData.userId, _tools.webSocket.options.permanentId && (86400 * 365 * 10));
-					}
+					sessionStorage.setItem('sessionId', responseData.sessionId);
+				}
+				else
+				{
+					cookie.write('sessionId', responseData.sessionId);
 				}
 
 				for (let key in _webSocketListeners)

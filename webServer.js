@@ -3,7 +3,6 @@
 const $http = require('http')
 const $https = require('https')
 const $fs = require('fs')
-const $Uuidv1 = require('uuid/v1')
 const $path = require('path')
 const $mime = require('./mime.json')
 const $files = new Map([
@@ -16,7 +15,7 @@ module.exports = (serverManager) =>
 {
 	let _server
 	let _port
-	let _userGroups = {}
+	let _userGroups = new Map()
 	let _broadcasts = []
 	let _root = $path.dirname(module.filename).appendTrail('/')
 	let _listener = (request) =>
@@ -60,24 +59,24 @@ module.exports = (serverManager) =>
 		_listener = callback
 	}
 
-	_server.addUserGroup = (userId, groupId) =>
+	_server.addUserGroup = (sessionId, groupId) =>
 	{
-		if (_userGroups[userId])
+		if (_userGroups.has(sessionId))
 		{
-			_userGroups[userId].push(groupId)
+			_userGroups.get(sessionId).push(groupId)
 		}
 		else
 		{
-			_userGroups[userId] = [groupId]
+			_userGroups.set(sessionId, [groupId])
 		}
 	}
 
 	_server.broadcast = (groupId, dataType, data, lifeSpan) =>
 	{
 		_broadcasts.push({
-			userIds: groupId && Object.keys(_userGroups).filter((userId) =>
+			sessionIds: groupId && Array.from(_userGroups.keys()).filter((sessionId) =>
 				{
-					return _userGroups[userId].includes(groupId)
+					return _userGroups.get(item[0]).includes(groupId)
 				}),
 			requestId: dataType,
 			data: {
@@ -100,6 +99,26 @@ module.exports = (serverManager) =>
 			{
 				try
 				{
+					let getPromise = serverManager.processGET(request)
+
+					if (getPromise)
+					{
+						getPromise.then((data) =>
+						{
+							response.write(data)
+							response.writeHead(200)
+							response.end()
+							serverManager.writeLog(serverManager.config.web.protocol, 200, request, startTime)
+						})
+						.catch((error) =>
+						{
+							response.writeHead(404)
+							response.end()
+							serverManager.writeLog(serverManager.config.web.protocol, 404, request, startTime, error)
+						})
+						return
+					}
+
 					let url = $path.parse(request.url)
 					let file = $files.get(request.url)
 
@@ -118,9 +137,9 @@ module.exports = (serverManager) =>
 					{
 						if (err)
 						{
-							serverManager.writeLog(serverManager.config.web.protocol, 404, request, startTime, err)
 							response.writeHead(404)
 							response.end()
+							serverManager.writeLog(serverManager.config.web.protocol, 404, request, startTime, err)
 							return
 						}
 
@@ -136,9 +155,9 @@ module.exports = (serverManager) =>
 				}
 				catch (err)
 				{
-					serverManager.writeLog(serverManager.config.web.protocol, 404, request, startTime, err)
 					response.writeHead(404)
 					response.end()
+					serverManager.writeLog(serverManager.config.web.protocol, 404, request, startTime, err)
 				}
 				return
 			}
@@ -153,10 +172,12 @@ module.exports = (serverManager) =>
 					if (queryData.length > serverManager.config.web.messageSizeLimit)
 					{
 						queryData = ""
-						serverManager.writeLog(serverManager.config.web.protocol, 413, request, startTime, err)
+
 						response.writeHead(413)
 						response.end()
 						request.connection.destroy()
+
+						serverManager.writeLog(serverManager.config.web.protocol, 413, request, startTime, err)
 					}
 				})
 
@@ -189,7 +210,8 @@ module.exports = (serverManager) =>
 					}
 
 					let responseData = {}
-					let userId = json.userId || $Uuidv1()
+					let sessionId = serverManager.validateSession(json.sessionId)
+
 					let promises = json.actions.map((action) =>
 					{
 						let promise = new serverManager.Promise()
@@ -212,7 +234,7 @@ module.exports = (serverManager) =>
 						setTimeout(() =>
 						{
 							_listener({
-								userId: userId,
+								sessionId: sessionId,
 								action: action.action,
 								parameters: action.parameters,
 								inputDataLength: inputData.length,
@@ -271,16 +293,16 @@ module.exports = (serverManager) =>
 								continue
 							}
 
-							if (_broadcasts[b].userIds)
+							if (_broadcasts[b].sessionIds)
 							{
-								let i = _broadcasts[b].userIds.indexOf(request.userId)
+								let i = _broadcasts[b].sessionIds.indexOf(request.sessionId)
 
 								if (i !== -1)
 								{
 									responseData[_broadcasts[b].requestId] = _broadcasts[b].data
 
-									_broadcasts[b].userIds[i].splice(i, 1)
-									if (_broadcasts[b].userIds === 0)
+									_broadcasts[b].sessionIds[i].splice(i, 1)
+									if (_broadcasts[b].sessionIds === 0)
 									{
 										remove.push(b)
 									}
@@ -298,7 +320,7 @@ module.exports = (serverManager) =>
 						}
 
 						let outputJSON = {
-							userId: userId,
+							sessionId: sessionId,
 							responses: responseData
 						}
 

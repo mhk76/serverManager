@@ -1,11 +1,10 @@
 'use strict'
 
 const $ws = require('ws')
-const $Uuidv1 = require('uuid/v1')
 
 module.exports = (serverManager) =>
 {
-	let _webSockets = {}
+	let _webSockets = new Map()
 	let _listener = (request) =>
 		{
 			console.log('default webSocket listener', request)
@@ -35,7 +34,6 @@ module.exports = (serverManager) =>
 
 						appRequest = {
 							requestId: json.requestId,
-							userId: json.userId,
 							action: json.action,
 							parameters: json.parameters,
 							inputDataLength: message.length,
@@ -55,7 +53,6 @@ module.exports = (serverManager) =>
 							{
 								let outputJSON = {
 									requestId: appRequest.requestId,									
-									userId: appRequest.userId,
 									status: status || 'ok',
 									data: data || {}
 								}
@@ -100,36 +97,19 @@ module.exports = (serverManager) =>
 						return
 					}
 
-					if (webSocket.userId && appRequest.userId && webSocket.userId !== appRequest.userId)
+					if (!webSocket.sessionId)
 					{
-						serverManager.writeLog('ws', 'invalid-userId', appRequest, startTime)
-						webSocket.terminate()
-						delete _webSockets[webSocket.userId]
-						return
+						webSocket.sessionId = serverManager.validateSession()
+						_webSockets.set(
+							webSocket.sessionId,
+							{
+								webSocket: webSocket,
+								groups: []
+							}
+						)
 					}
-					else if (appRequest.userId)
-					{
-						webSocket.userId = appRequest.userId = appRequest.userId || $Uuidv1()
 
-						if (_webSockets[webSocket.userId] && _webSockets[webSocket.userId].webSocket !== webSocket)
-						{
-							serverManager.writeLog('ws', 'terminate-old', appRequest, startTime)
-							_webSockets[webSocket.userId].webSocket.terminate()
-						}
-	
-						_webSockets[webSocket.userId] = {
-							webSocket: webSocket,
-							groups: []
-						}
-					}
-					else
-					{
-						webSocket.userId = appRequest.userId = webSocket.userId || $Uuidv1()
-						_webSockets[webSocket.userId] = {
-							webSocket: webSocket,
-							groups: []
-						}
-					}
+					appRequest.sessionId = webSocket.sessionId
 
 					setTimeout(() =>
 					{
@@ -138,7 +118,8 @@ module.exports = (serverManager) =>
 				})
 				.on('close', () =>
 				{
-					delete _webSockets[webSocket.userId]
+					serverManager.releaseSession(webSocket.sessionId)
+					_webSockets.delete(webSocket.sessionId)
 				})
 		})
 
@@ -149,9 +130,9 @@ module.exports = (serverManager) =>
 		{
 			_listener = callback
 		},
-		addUserGroup: (userId, groupId) =>
+		addUserGroup: (sessionId, groupId) =>
 		{
-			_webSockets[userId].groups.push(groupId)
+			_webSockets.get(sessionId).groups.push(groupId)
 		},
 		broadcast: (groupId, dataType, data) =>
 		{
@@ -162,18 +143,18 @@ module.exports = (serverManager) =>
 				outputDataLength: JSON.stringify(data || '').length
 			}
 
-			for (let userId in _webSockets)
+			_webSockets.forEach((data, sessionId) =>
 			{
-				if (groupId == null || _webSockets[userId].groups.includes(groupId))
+				if (groupId == null || data.groups.includes(groupId))
 				{
-					_webSockets[userId].webSocket.send(JSON.stringify({
+					data.webSocket.send(JSON.stringify({
 						requestId: dataType,
-						userId: userId,
+						sessionId: sessionId,
 						status: 'ok',
 						data: data
 					}))
 				}
-			}
+			})
 
 			serverManager.writeLog('ws', 'broadcast', appRequest, startTime)
 		} // broadcast		

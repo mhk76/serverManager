@@ -1,19 +1,19 @@
-'use strict'
-
 const $fs = require('fs')
 const $path = require('path')
 const $Promise = require('./promise.js')
+const $Uuidv1 = require('uuid/v1')
 
 require('./prototypes.js')
 
 const $root = $path.dirname(require.main.filename).appendTrail('/')
-
-const $stateUnloaded = 0x00
-const $stateData = 0x01
-const $stateCache = 0x02
-const $stateLog = 0x04
-const $stateWebServer = 0x08
-const $stateLoaded = 0x0f
+const $state = {
+	unloaded: 0x00,
+	data = 0x01,
+	cache = 0x02,
+	log = 0x04,
+	webServer = 0x08,
+	loaded = 0x0f
+}
 
 module.exports = (config) =>
 {
@@ -22,7 +22,7 @@ module.exports = (config) =>
 		altered: false,
 		sections: {}
 	}
-	let _startState = $stateUnloaded
+	let _startState = $state.unloaded
 	let _mongooseModels
 	let _serverManagerStart = new $Promise()
 	let _watching = []
@@ -47,11 +47,11 @@ module.exports = (config) =>
 		{
 			_startState |= state
 
-			if (state === $stateCache && _serverManager.config.cache.interval != null)
+			if (state === $state.cache && _serverManager.config.cache.interval != null)
 			{
 				setCacheInterval()
 			}
-			if (state === $stateLog)
+			if (state === $state.log)
 			{
 				_serverManager.webServer = new require('./webServer.js')(_serverManager)
 
@@ -63,11 +63,11 @@ module.exports = (config) =>
 							_serverManager.webSocket = new require('./webSocket.js')(_serverManager)
 						}
 			
-						_initializing.resolve($stateWebServer)
+						_initializing.resolve($state.webServer)
 					})
 			}
 
-			if (_startState === $stateLoaded)
+			if (_startState === $state.loaded)
 			{
 				if (_app)
 				{
@@ -128,15 +128,15 @@ module.exports = (config) =>
 		
 				if (_serverManager.config.server.database === 'mongoose')
 				{
-					_initializing.resolve($stateData)
+					_initializing.resolve($state.data)
 				}
 				if (_serverManager.config.log.format === 'mongoose')
 				{
-					_initializing.resolve($stateLog)
+					_initializing.resolve($state.log)
 				}
 				if (_serverManager.config.cache.format === 'mongoose')
 				{
-					initCache()
+					prepareCache()
 				}
 			}) // then()
 			.catch((error) =>
@@ -158,7 +158,7 @@ module.exports = (config) =>
 
 				if (_serverManager.config.server.database === 'mysql')
 				{
-					_initializing.resolve($stateData)
+					_initializing.resolve($state.data)
 				}				
 				if (_serverManager.config.log.format === 'mysql')
 				{
@@ -182,7 +182,7 @@ module.exports = (config) =>
 						.then(() =>
 						{
 							logInfo('MySql log database initialised')
-							_initializing.resolve($stateLog)
+							_initializing.resolve($state.log)
 						})
 						.catch((error) =>
 						{
@@ -191,7 +191,7 @@ module.exports = (config) =>
 				}
 				if (_serverManager.config.cache.format === 'mysql')
 				{
-					initCache()
+					prepareCache()
 				}
 			})
 			.catch((error) =>
@@ -205,32 +205,32 @@ module.exports = (config) =>
 	
 	if (_serverManager.config.server.database !== 'mongoose' && _serverManager.config.server.database !== 'mysql')
 	{
-		_initializing.resolve($stateData)
+		_initializing.resolve($state.data)
 	}
 
 	if (_serverManager.config.log.format === 'file')
 	{
 		logInfo('Logging into files')
-		_initializing.resolve($stateLog)
+		_initializing.resolve($state.log)
 	}
 	if (_serverManager.config.log.format === 'stdout')
 	{
 		logInfo('Logging int stdout')
-		_initializing.resolve($stateLog)
+		_initializing.resolve($state.log)
 	}
 	if (_serverManager.config.log.format === 'off')
 	{
 		logInfo('No logging')
-		_initializing.resolve($stateLog)
+		_initializing.resolve($state.log)
 	}
 
 	if (_serverManager.config.cache.format === 'file')
 	{
-		initCache()
+		prepareCache()
 	}
 	if (_serverManager.config.cache.format === 'off')
 	{
-		_initializing.resolve($stateCache)
+		_initializing.resolve($state.cache)
 		logInfo('No cache backup')
 	}
 
@@ -425,6 +425,42 @@ module.exports = (config) =>
 		}
 	}
 
+	_serverManager.processGET = (request) =>
+	{
+		if (_app.processGET)
+		{
+			return _app.processGET(request)
+		}
+	}
+
+	const $sessions = new Map()
+
+	_serverManager.validateSession = (sessionId) =>
+	{
+		if (!$sessions.has(sessionId) || $sessions.get(sessionId) < new Date().getTime())
+		{
+			if (sessionId)
+			{
+				_app.releaseSession(sessionId)
+			}
+			sessionId = $Uuidv1()
+		}
+
+		$sessions.set(sessionId, new Date() + _serverManager.config.web.sessionExpiration)
+
+		return sessionId
+	}
+
+	_serverManager.releaseSession = (sessionId) =>
+	{
+		if (_app.releaseSession)
+		{
+			_app.releaseSession(sessionId)
+		}
+
+		$sessions.delete(sessionId)
+	}
+
 	return _serverManagerStart
 	
 
@@ -542,6 +578,10 @@ module.exports = (config) =>
 			logExit('Invalid message size limit (>1000 [bytes])', config.web.messageSizeLimit)
 		}
 
+		if (config.web.sessionExpiration < 1 || config.web.sessionExpiration > 1500)
+		{
+			logExit('Invalid session expiration time (1-1500 minutes)', config.web.sessionExpiration)
+		}
 
 		// cache
 		config.cache = config.cache || {}
@@ -592,7 +632,7 @@ module.exports = (config) =>
 		return config
 	} // verifyConfig()
 
-	function initCache()
+	function prepareCache()
 	{
 		if (_serverManager.config.cache.format === 'mongoose')
 		{
@@ -610,7 +650,7 @@ module.exports = (config) =>
 
 					logInfo('MongoDB cache loaded')
 
-					_initializing.resolve($stateCache)
+					_initializing.resolve($state.cache)
 				})
 				.catch((error) =>
 				{
@@ -644,7 +684,7 @@ module.exports = (config) =>
 
 							logInfo('MySql cache loaded')
 
-							_initializing.resolve($stateCache)
+							_initializing.resolve($state.cache)
 						})
 						.catch((error) =>
 						{
@@ -677,7 +717,7 @@ module.exports = (config) =>
 
 				_cache.altered = false
 
-				_initializing.resolve($stateCache)
+				_initializing.resolve($state.cache)
 				logInfo('File cache loaded')
 			}
 			else
@@ -686,11 +726,11 @@ module.exports = (config) =>
 					altered: false,
 					sections: {}
 				}
-				_initializing.resolve($stateCache)
+				_initializing.resolve($state.cache)
 				logInfo('Using file cache')
 			}
 		}
-	} // initCache()
+	} // prepareCache()
 
 	function setCacheInterval()
 	{
