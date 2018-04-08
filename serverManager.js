@@ -8,11 +8,11 @@ require('./prototypes.js')
 const $root = $path.dirname(require.main.filename).appendTrail('/')
 const $state = {
 	unloaded: 0x00,
-	data = 0x01,
-	cache = 0x02,
-	log = 0x04,
-	webServer = 0x08,
-	loaded = 0x0f
+	data: 0x01,
+	cache: 0x02,
+	log: 0x04,
+	webServer: 0x08,
+	loaded: 0x0f
 }
 
 module.exports = (config) =>
