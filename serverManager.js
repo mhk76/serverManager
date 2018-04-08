@@ -425,11 +425,11 @@ module.exports = (config) =>
 		}
 	}
 
-	_serverManager.processGET = (request) =>
+	_serverManager.processGET = (request, response) =>
 	{
 		if (_app.processGET)
 		{
-			return _app.processGET(request)
+			return _app.processGET(request, response)
 		}
 	}
 

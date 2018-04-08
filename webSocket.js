@@ -52,7 +52,8 @@ module.exports = (serverManager) =>
 							response: (data, status) =>
 							{
 								let outputJSON = {
-									requestId: appRequest.requestId,									
+									sessionId: webSocket.sessionId,
+									requestId: appRequest.requestId,
 									status: status || 'ok',
 									data: data || {}
 								}

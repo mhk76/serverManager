@@ -99,25 +99,28 @@ module.exports = (serverManager) =>
 			{
 				try
 				{
-					let getPromise = serverManager.processGET(request)
-
-					if (getPromise)
-					{
-						getPromise.then((data) =>
+					const response = {
+						write: (data, headers, status = 200) =>
 						{
-							response.write(data)
-							response.writeHead(200)
-							response.end()
-							serverManager.writeLog(serverManager.config.web.protocol, 200, request, startTime)
-						})
-						.catch((error) =>
+							response.writeHead(status, headers)
+							response.end(data)
+							request.outputDataLength = data.length
+							serverManager.writeLog(serverManager.config.web.protocol, status, request, startTime)
+						},
+						terminate: (status = 404, error = 'handler-terminate') =>
 						{
 							response.writeHead(404)
 							response.end()
 							serverManager.writeLog(serverManager.config.web.protocol, 404, request, startTime, error)
-						})
+						}
+					}
+
+					if (serverManager.processGET(request, response))
+					{
 						return
 					}
+
+					response.write = response.terminate = () => { throw new Error('WebServer - processGET() must return true for handled urls') }
 
 					let url = $path.parse(request.url)
 					let file = $files.get(request.url)
@@ -150,6 +153,8 @@ module.exports = (serverManager) =>
 
 						$fs.createReadStream(file).pipe(response)
 
+						request.outputDataLength = $fs.statSync(file).size
+
 						serverManager.writeLog(serverManager.config.web.protocol, 200, request, startTime)
 					})
 				}
@@ -161,7 +166,7 @@ module.exports = (serverManager) =>
 				}
 				return
 			}
-			
+
 			if (request.method === 'POST' && !serverManager.config.web.disablePost)
 			{
 				let queryData = []

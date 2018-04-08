@@ -45,7 +45,7 @@ exports.serverManagerTools = (function()
 			},
 			'fetch': (action, parameters) =>
 			{
-				if (_buffer[action] && _tools.equals(parameters, _buffer[action].parameters))
+				if (_buffer[action] && $tools.equals(parameters, _buffer[action].parameters))
 				{
 					let promise = Promise.resolve(_buffer[action].response)
 
@@ -169,7 +169,7 @@ exports.serverManagerTools = (function()
 			{
 				$tools.webSocket.optios = options
 				_webSocket = new connectWebSocket()
-				return _webSocketPromise
+				return $tools.webSocket.loader
 			},
 			'addListener': (key, callback) =>
 			{
@@ -247,28 +247,25 @@ exports.serverManagerTools = (function()
 
 				if (options.webSocket)
 				{
-					services.push($tools.webSocket.start(options))
+					$tools.webSocket.start(options)
+						.then(() =>
+						{
+							$tools.server.fetch = $tools.webSocket.fetch
+							$tools.server.addListener = $tools.webSocket.addListener
+							$tools.server.usingWebSocket = true
+
+							_serverPromise.resolve()
+						})
+					return $tools.server.loader
 				}
 
-				Promise.all(services).then(() =>
-				{
-					if (options.webSocket)
-					{
-						$tools.server.fetch = $tools.webSocket.fetch
-						$tools.server.addListener = $tools.webSocket.addListener
-						$tools.server.usingWebSocket = true
-					}
-					else
-					{
-						$tools.server.fetch = $tools.http.fetch
-						$tools.server.addListener = () => { }
-						$tools.server.usingWebSocket = false
-					}
+				$tools.server.fetch = $tools.http.fetch
+				$tools.server.addListener = () => { }
+				$tools.server.usingWebSocket = false
 
-					_serverPromise.resolve()
-				})
+				_serverPromise.resolve()
 
-				return _serverPromise
+				return $tools.server.loader
 			},
 			'readStore': (name, defaultValue) =>
 			{
@@ -362,7 +359,7 @@ exports.serverManagerTools = (function()
 			
 				return object1.every((value, index) =>
 				{
-					return _tools.equals(value, object2[index], softComparison)
+					return $tools.equals(value, object2[index], softComparison)
 				})
 			}
 			if (object1 instanceof Date)
@@ -392,7 +389,7 @@ exports.serverManagerTools = (function()
 				{
 					return object2[key] instanceof Function
 				}
-				return _tools.equals(object1[key], object2[key], softComparison)
+				return $tools.equals(object1[key], object2[key], softComparison)
 			})
 		} 
 	}
@@ -435,7 +432,7 @@ exports.serverManagerTools = (function()
 				{
 					cookie.write('sessionId', responseData.sessionId)
 				}
-
+		
 				for (let key in _webSocketListeners)
 				{
 					if (key === responseData.requestId)
@@ -447,9 +444,9 @@ exports.serverManagerTools = (function()
 
 				promise.resolve(responseData.data)
 			}
-			catch (err)
+			catch (error)
 			{
-				console.log(err)
+				console.log('WebSocket Error', error)
 			}
 		}
 
