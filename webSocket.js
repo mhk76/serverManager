@@ -34,6 +34,7 @@ module.exports = (serverManager) =>
 
 						appRequest = {
 							requestId: json.requestId,
+							sessionId: json.sessionId,
 							action: json.action,
 							parameters: json.parameters,
 							inputDataLength: message.length,
@@ -100,7 +101,7 @@ module.exports = (serverManager) =>
 
 					if (!webSocket.sessionId)
 					{
-						webSocket.sessionId = serverManager.validateSession()
+						webSocket.sessionId = serverManager.validateSession(appRequest.sessionId)
 						_webSockets.set(
 							webSocket.sessionId,
 							{
@@ -119,7 +120,6 @@ module.exports = (serverManager) =>
 				})
 				.on('close', () =>
 				{
-					serverManager.releaseSession(webSocket.sessionId)
 					_webSockets.delete(webSocket.sessionId)
 				})
 		})

@@ -1,6 +1,6 @@
 {
 	"name": "servermanager",
-	"version": "1.4.3",
+	"version": "1.4.4",
 	"description": "Web application server module over HTTP POST and WebSocket",
 	"repository": {
 		"type": "git",

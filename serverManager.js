@@ -1,7 +1,7 @@
 const $fs = require('fs')
 const $path = require('path')
 const $Promise = require('./promise.js')
-const $Uuidv1 = require('uuid/v1')
+const $Uuid = require('uuid/v4')
 
 require('./prototypes.js')
 
@@ -443,10 +443,10 @@ module.exports = (config) =>
 			{
 				_app.releaseSession(sessionId)
 			}
-			sessionId = $Uuidv1()
+			sessionId = $Uuid()
 		}
 
-		$sessions.set(sessionId, new Date() + _serverManager.config.web.sessionExpiration)
+		$sessions.set(sessionId, new Date().getTime() + _serverManager.config.web.sessionExpiration)
 
 		return sessionId
 	}
@@ -557,6 +557,7 @@ module.exports = (config) =>
 		config.web.messageSizeLimit = config.web.messageSizeLimit || 1e5
 		config.web.disablePost = (config.web.disablePost == true)
 		config.web.webSockets = (config.web.webSockets == true) || config.web.disablePost
+		config.web.sessionExpiration = config.web.sessionExpiration || 60
 	
 		if (!$fs.existsSync(config.web.root + config.web.defaultFile))
 		{
@@ -582,6 +583,8 @@ module.exports = (config) =>
 		{
 			logExit('Invalid session expiration time (1-1500 minutes)', config.web.sessionExpiration)
 		}
+
+		config.web.sessionExpiration = config.web.sessionExpiration * 60000
 
 		// cache
 		config.cache = config.cache || {}
